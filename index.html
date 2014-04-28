@@ -1,0 +1,646 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>羽山的地圖</title>
+<meta name="viewport" content="width=device-width; initial-scale=1.0;minimum-scale=1.0; maximum-scale=1.0; user-scalable=0;"/>
+
+<script type="text/javascript" src="inc/javascript/cordova.js"></script>
+<script type="text/javascript" src="inc/javascript/jquery-1.8.3.min.js"></script>
+<!--PHP函式庫-->
+<script type="text/javascript" src="inc/javascript/php.js"></script>
+<!--jquery myBox函式庫-->
+<script type="text/javascript" src="inc/javascript/mybox-0.1.min.js"></script>
+<!--Memory -->
+<script type="text/javascript" src="inc/javascript/memory.js"></script>
+<!--Debug -->
+<script type="text/javascript" src="inc/javascript/debug.js"></script>
+
+<!--未分類函式庫-->
+<script type="text/javascript" src="inc/javascript/include.js"></script>
+
+<!--載入index.css-->
+<link rel="stylesheet" href="css/reset.css" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/index.css" />
+
+<!--載入jQuery-mobile-->
+<script  type="text/javascript" src="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.min.js"></script>
+<link rel="stylesheet" href="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.css" />
+
+<!-- 載入即時定位功能 -->
+<script type="text/javascript" src="inc/javascript/geolocation.js"></script>
+<!-- 載入羅盤功能 -->
+<script type="text/javascript" src="inc/javascript/compass.js"></script>
+
+<!--拿來讀 config.js -->
+<script type="text/javascript" src="inc/javascript/config.js"></script>
+
+<!--加速click功能 -->
+<script type="text/javascript" src="inc/javascript/fastclick.js"></script>	
+			
+<script language="javascript">
+window['g'] = {
+	token:'token',
+	online_status:false,
+	me_lat:'',
+	me_lng:'',
+	road:'',
+	focus_me:false,
+	direct:''
+};
+function cleanAll(){
+  $('#map').tinyMap('clear', 'polyline,circle,direction,marker');
+  $('#map').tinyMap('clear', ['polyline', 'circle', 'direction', 'marker']);
+}
+function showMe(){
+	if(window['g']['me_lat']!="")
+	{
+		//$('#map').tinyMap('modify',{
+		//	zoom: 15
+		//});
+		$('#map').tinyMap('panto', {
+			x:window['g']['me_lat'], 
+			y:window['g']['me_lng']
+		});
+		
+		
+		$('#map').tinyMap('modify',
+		{						
+		    marker: [ 
+			    {
+					addr: [
+			                parseFloat(window['g']['me_lat']),
+			                parseFloat(window['g']['me_lng'])
+			              ],
+			              text: '',
+			              //label: '<strong class="label">現在位置:<br>LAT:'+window['g']['me_lat']+"<br>LNG:"+window['g']['me_lng']+'</strong>',
+			              label:'',
+			              css: 'me',
+			              icon: 'images/me.png'
+			        	  
+			    }
+		    ],
+	   		markerFitBounds: false
+	    });		
+	}
+}
+function showRoad(){
+	if(window['g']['road']=="")
+	{
+		return;
+	}
+	var jd = json_decode(window['g']['road']);	
+	if(jd!=null && jd['status']=="OK")
+	{      
+	  //alert(jd['routes'][0]['legs'][0]['start_location']['lat']);
+	  //點位
+	  var all_points = jd['routes'][0]['overview_polyline']['points']; 
+	  $("#map").tinyMap('modify',{
+	    
+	   center: sprintf("%f,%f",
+	              (jd['routes'][0]['bounds']['northeast']['lat']+jd['routes'][0]['bounds']['southwest']['lat'])/2,
+	              (jd['routes'][0]['bounds']['northeast']['lng']+jd['routes'][0]['bounds']['southwest']['lng'])/2
+	           ),
+	   polyline: {
+	      coords:all_points,
+	      color: '#ff0000',
+	      width: 4
+	   }
+	  });
+	  $("#map").tinyMap('modify',{
+	    marker: [ 
+	    {
+	        //起始
+	        addr: [
+	                jd['routes'][0]['legs'][0]['start_location']['lat'],
+	                jd['routes'][0]['legs'][0]['start_location']['lng']
+	              ],
+	        text: '<strong class="label">'+jd['routes'][0]['legs'][0]['start_address']+'</strong>',
+	        label:jd['routes'][0]['legs'][0]['start_address'],
+	        css: 'label',
+	        icon: '4.png'
+	    },
+	    {
+	        //目的地
+	        addr: [
+	                jd['routes'][0]['overview_polyline']['points'][count(jd['routes'][0]['overview_polyline']['points'])-1][0],
+	                jd['routes'][0]['overview_polyline']['points'][count(jd['routes'][0]['overview_polyline']['points'])-1][1]
+	              ],
+	        text: '<strong class="label">'+$("#END").val()+'</strong>',
+	        label:$("#END").val(),
+	        css: 'label'
+	    }
+	   ],
+	   markerFitBounds: false
+	  });
+	}
+	else
+	{
+		alert('查詢失敗...');
+	}
+}
+function load_book(dom){
+	var id = dom.attr('id');
+	var kind = end(explode("_",id));
+	kind = strtoupper(kind);
+	var tmp = $("#t_showBook").html();
+	switch(kind)
+	{
+		case 'S':
+			tmp=str_replace("{c_kind}","起始",tmp);
+			break;
+		case 'E':
+			tmp=str_replace("{c_kind}","目標",tmp);
+			break;
+	}	
+	tmp=str_replace("{e_kind}",kind,tmp);
+	tmp=str_replace("{width}",window['wh']['width']*90/100,tmp);
+	tmp=str_replace("{height}",window['wh']['height']*90/100,tmp);
+	dialogOn(tmp,function(){
+			$("#"+kind+"_CANCEL_BTN").unbind("click");
+			$("#"+kind+"_CANCEL_BTN").click(function(){
+				dialogOff();	
+			});	
+			//$("#"+kind+"_for_book_tbody").css({
+			//	'height':(window['wh']['height']*60/100)+'px'
+			//});					
+			
+			
+			var tbody_tmp=new Array();			
+			var URL = sprintf("%s?mode=getPaths",window['webservice']);			
+			var tmp = myAjax(
+				URL,
+				""
+			);
+			//alert(tmp);
+			var tmp = json_decode(tmp);
+			if(tmp['STATUS']!='1')
+			{
+				dialogOff();
+				return;
+			}
+			var ra = tmp['DATA'];
+			for(var i=0,max_i=count(ra);i<max_i;i++)
+			{
+				var tmp = $("#"+kind+"_for_book_tfoot").html();
+				tmp = str_replace("{ID}",ra[i]['id'],tmp);
+				tmp = str_replace("{ADDRESS}",ra[i]['address'],tmp);
+				array_push(tbody_tmp,tmp);
+			}
+			$("#"+kind+"_for_book_tbody").html(
+					sprintf("<table border='1' cellspacing='0' cellpadding='0' width='100%'> \
+								%s \
+								</table>",implode("\n",tbody_tmp)));
+			switch(kind)
+			{
+				case 'S':
+					//載入keyin值
+					$("#"+kind+"_PLACE_INPUT").val(trim($("#START").val()));
+					break;
+				case 'E':
+					//載入keyin值
+					$("#"+kind+"_PLACE_INPUT").val(trim($("#END").val()));
+					break;
+			}
+			//刪除
+			$("#"+kind+"_for_book_tbody *[name$='_DELETE_BTN']").unbind("click");
+			$("#"+kind+"_for_book_tbody *[name$='_DELETE_BTN']").click(function(){
+				if(confirm("你確定要刪除嗎?")==true){
+					var id = $(this).attr('req');
+					var URL = sprintf("%s?mode=delPath",window['webservice']);
+					var tmp = myAjax(URL,
+									"&token="+encodeURIComponent(window['g']['token'])+
+									"&id="+id
+								);
+					tmp = json_decode(tmp);
+					if(tmp['STATUS']!='1')
+					{
+						alert("刪除失敗...");
+					}	
+					load_book(dom);
+				}
+			});
+			//選擇
+			$("#"+kind+"_for_book_tbody *[name$='_CHOICE_BTN']").unbind("click");
+			$("#"+kind+"_for_book_tbody *[name$='_CHOICE_BTN']").click(function(){
+				var address = $(this).attr('req');
+				switch(kind)
+				{
+					case 'S':
+						//載入keyin值
+						$("#START").val(address);
+						break;
+					case 'E':
+						//載入keyin值
+						$("#END").val(address);
+						break;
+				}
+				dialogOff();
+			});
+			//儲存
+			$("#"+kind+"_SAVE_BTN").unbind("click");
+			$("#"+kind+"_SAVE_BTN").click(function(){
+				var data = addslashes(stripslashes(trim($("#"+kind+"_PLACE_INPUT").val())));				
+				var URL = sprintf("%s?mode=savePath",window['webservice']);					
+				var tmp = myAjax(URL,
+					"&token="+encodeURIComponent(window['g']['token'])+
+					"&address="+encodeURIComponent(data)
+				);
+				tmp = json_decode(tmp);
+				if(tmp['STATUS']!='1')
+				{
+					alert("儲存失敗...");
+				}		
+				load_book(dom);
+			});
+	});	
+
+}
+function Load() {
+	document.addEventListener("online", onOnLine, false);
+	document.addEventListener("offline", onOffLine, false);	
+	document.addEventListener("deviceready", onDeviceReady, false);
+
+}
+function onOnLine(){
+	var networkState = navigator.connection.type;
+	var states = {};
+    states[Connection.UNKNOWN]  = 'Unknown connection';
+    states[Connection.ETHERNET] = 'Ethernet connection';
+    states[Connection.WIFI]     = 'WiFi connection';
+    states[Connection.CELL_2G]  = 'Cell 2G connection';
+    states[Connection.CELL_3G]  = 'Cell 3G connection';
+    states[Connection.CELL_4G]  = 'Cell 4G connection';
+    states[Connection.CELL]     = 'Cell generic connection';
+    states[Connection.NONE]     = 'No network connection';
+    //alert('Connection type: ' + states[networkState]);	
+	window['g']['online_status']=true;
+}
+function onOffLine(){
+	alert("網路不通，請確認可以連線吧...");
+	location.reload();
+}
+function index_init(){
+    $(document).bind("mobileinit", function () { $.mobile.defaultPageTransition = 'none'; });
+    FastClick.attach(document.body);
+	window['wh']=getWindowSize();				
+	
+	geolocation_init(15000);
+	window['g']['direct']=$("#direct");
+	window['g']['direct'].css({
+		'width':(window['wh']['width']/2)+'px',
+		'height':(window['wh']['height']/2)+'px'
+	});
+	//alert(window['g']['direct'].css('width'));
+	window['g']['direct'].css({
+		'left':(window['wh']['width']/4)+'px',
+		'top':(window['wh']['height']/4)+'px'
+	});
+	window['g']['direct'].show();
+	window['g']['direct'].css({
+		'pointer-events':'none'	
+	});
+
+	compass_init(100);
+	
+	$("#map").css({
+		'position':'fixed',
+	 	'left':'0px',
+	  	'top':'0px',
+	  	'width':window['wh']['width']+'px',
+	  	'height':window['wh']['height']+'px',
+	  	'z-index':'0'
+	});		  
+	$("#map").tinyMap({
+	     center: '台中市南區',
+	     zoom: 12,
+	     panControl:false,
+	     navigationControl:false,
+	     zoomControl:false,
+	     loading:"Google 地圖載入中..."
+	});
+	//$("html,body").css({
+	//	'pointer-events':'none'   
+	//});		
+	$("#gps").unbind("click");
+	$("#gps").click(function(){
+	  	cleanAll();
+	  	showMe();
+	  	showRoad();
+	});		
+	$("#gps").css({
+		'background-image':'url(images/gps.png)'
+	});
+	$("#car").css({
+		'background-image':'url(images/car.png)'
+	});
+	$("#gps_focus_on_off_btn").css({
+		'background-image':'url(images/focus_off.png)'
+	});
+	$("#direct").css({
+		'background-image':'url(images/direct.png)'
+	});
+	$("#form_now_place_s").attr('src','images/gps.png');
+	$("#form_now_place_e").attr('src','images/gps.png');
+	$("#form_book_s").attr('src','images/book.png');
+	$("#form_book_e").attr('src','images/book.png');		
+	setTimeout(function(){
+		$("#gps").trigger('click');
+	},5000);
+	$("#car").unbind("click");
+	$("#car").click(function(){
+		$("#theform").toggle();
+	});
+	//追蹤鈕
+	$("#gps_focus_on_off_btn").unbind("click");
+	$("#gps_focus_on_off_btn").click(function(){			
+		switch(window['g']['focus_me'])
+		{
+			case false:
+					$("#gps_focus_on_off_btn").css({
+						'background-image':'url(images/focus_on.png)'
+					});						
+					window['g']['focus_me']=true;
+				break;
+			case true:
+					$("#gps_focus_on_off_btn").css({
+						'background-image':'url(images/focus_off.png)'
+					});
+					window['g']['focus_me']=false;
+				break;				
+		}					
+	});		  
+	$("#form_now_place_s").unbind("click");
+	$("#form_now_place_s").click(function(){
+		//現在位置
+		$("#START").val(sprintf("%f,%f",window['g']['me_lat'],window['g']['me_lng']));
+	});
+	$("#form_now_place_e").unbind("click");
+	$("#form_now_place_e").click(function(){
+		//現在位置
+		$("#END").val(sprintf("%f,%f",window['g']['me_lat'],window['g']['me_lng']));
+	});
+	$("#CANCEL_BTN").unbind("click");
+	$("#CANCEL_BTN").click(function(){
+		$("#theform").hide();
+	});
+	$("#GO_BTN").unbind("click");
+	$("#GO_BTN").click(function(){
+	    var message="";
+	    $("#START").val(trim($("#START").val()));
+	    $("#END").val(trim($("#END").val()));
+	    $("#WAY").val(trim($("#WAY").val()));
+	    if($("#START").val()=="")
+	    {
+	      message="起始位置未填...\n";
+	    }
+	    if($("#END").val()=="")
+	    {
+	      message="目的地位置未填...\n";
+	    }
+	    if(message!="")
+	    {
+	      alert(message);
+	      return;
+	    }
+	    dialogOn("查詢中...",function(){
+	    	myAjax_async(
+	    					$("#theform").attr('action'),
+	    					$("#theform").serialize(),function(data)
+	    					{
+	    						window['g']['road']=data;
+	    						cleanAll();
+							    showMe();
+							    showRoad();
+							    $("#theform").hide();
+							    dialogOff();
+	    					}
+			);
+	    	setTimeout(function(){
+	    		 dialogOff();
+	    	},5000);
+	    });
+	    
+	}); 
+	//按下歷史紀錄鈕
+	$("#form_book_s").unbind("click");
+	$("#form_book_s").click(function(){			
+		load_book($(this));
+	});
+	$("#form_book_e").unbind("click");
+	$("#form_book_e").click(function(){			
+		load_book($(this));
+	});
+}
+function loadLab(){
+	/*! LAB.js (LABjs :: Loading And Blocking JavaScript)
+    v2.0.3 (c) Kyle Simpson
+    MIT License
+	*/
+	(function(o){var K=o.$LAB,y="UseLocalXHR",z="AlwaysPreserveOrder",u="AllowDuplicates",A="CacheBust",B="BasePath",C=/^[^?#]*\//.exec(location.href)[0],D=/^\w+\:\/\/\/?[^\/]+/.exec(C)[0],i=document.head||document.getElementsByTagName("head"),L=(o.opera&&Object.prototype.toString.call(o.opera)=="[object Opera]")||("MozAppearance"in document.documentElement.style),q=document.createElement("script"),E=typeof q.preload=="boolean",r=E||(q.readyState&&q.readyState=="uninitialized"),F=!r&&q.async===true,M=!r&&!F&&!L;function G(a){return Object.prototype.toString.call(a)=="[object Function]"}function H(a){return Object.prototype.toString.call(a)=="[object Array]"}function N(a,c){var b=/^\w+\:\/\//;if(/^\/\/\/?/.test(a)){a=location.protocol+a}else if(!b.test(a)&&a.charAt(0)!="/"){a=(c||"")+a}return b.test(a)?a:((a.charAt(0)=="/"?D:C)+a)}function s(a,c){for(var b in a){if(a.hasOwnProperty(b)){c[b]=a[b]}}return c}function O(a){var c=false;for(var b=0;b<a.scripts.length;b++){if(a.scripts[b].ready&&a.scripts[b].exec_trigger){c=true;a.scripts[b].exec_trigger();a.scripts[b].exec_trigger=null}}return c}function t(a,c,b,d){a.onload=a.onreadystatechange=function(){if((a.readyState&&a.readyState!="complete"&&a.readyState!="loaded")||c[b])return;a.onload=a.onreadystatechange=null;d()}}function I(a){a.ready=a.finished=true;for(var c=0;c<a.finished_listeners.length;c++){a.finished_listeners[c]()}a.ready_listeners=[];a.finished_listeners=[]}function P(d,f,e,g,h){setTimeout(function(){var a,c=f.real_src,b;if("item"in i){if(!i[0]){setTimeout(arguments.callee,25);return}i=i[0]}a=document.createElement("script");if(f.type)a.type=f.type;if(f.charset)a.charset=f.charset;if(h){if(r){e.elem=a;if(E){a.preload=true;a.onpreload=g}else{a.onreadystatechange=function(){if(a.readyState=="loaded")g()}}a.src=c}else if(h&&c.indexOf(D)==0&&d[y]){b=new XMLHttpRequest();b.onreadystatechange=function(){if(b.readyState==4){b.onreadystatechange=function(){};e.text=b.responseText+"\n//@ sourceURL="+c;g()}};b.open("GET",c);b.send()}else{a.type="text/cache-script";t(a,e,"ready",function(){i.removeChild(a);g()});a.src=c;i.insertBefore(a,i.firstChild)}}else if(F){a.async=false;t(a,e,"finished",g);a.src=c;i.insertBefore(a,i.firstChild)}else{t(a,e,"finished",g);a.src=c;i.insertBefore(a,i.firstChild)}},0)}function J(){var l={},Q=r||M,n=[],p={},m;l[y]=true;l[z]=false;l[u]=false;l[A]=false;l[B]="";function R(a,c,b){var d;function f(){if(d!=null){d=null;I(b)}}if(p[c.src].finished)return;if(!a[u])p[c.src].finished=true;d=b.elem||document.createElement("script");if(c.type)d.type=c.type;if(c.charset)d.charset=c.charset;t(d,b,"finished",f);if(b.elem){b.elem=null}else if(b.text){d.onload=d.onreadystatechange=null;d.text=b.text}else{d.src=c.real_src}i.insertBefore(d,i.firstChild);if(b.text){f()}}function S(c,b,d,f){var e,g,h=function(){b.ready_cb(b,function(){R(c,b,e)})},j=function(){b.finished_cb(b,d)};b.src=N(b.src,c[B]);b.real_src=b.src+(c[A]?((/\?.*$/.test(b.src)?"&_":"?_")+~~(Math.random()*1E9)+"="):"");if(!p[b.src])p[b.src]={items:[],finished:false};g=p[b.src].items;if(c[u]||g.length==0){e=g[g.length]={ready:false,finished:false,ready_listeners:[h],finished_listeners:[j]};P(c,b,e,((f)?function(){e.ready=true;for(var a=0;a<e.ready_listeners.length;a++){e.ready_listeners[a]()}e.ready_listeners=[]}:function(){I(e)}),f)}else{e=g[0];if(e.finished){j()}else{e.finished_listeners.push(j)}}}function v(){var e,g=s(l,{}),h=[],j=0,w=false,k;function T(a,c){a.ready=true;a.exec_trigger=c;x()}function U(a,c){a.ready=a.finished=true;a.exec_trigger=null;for(var b=0;b<c.scripts.length;b++){if(!c.scripts[b].finished)return}c.finished=true;x()}function x(){while(j<h.length){if(G(h[j])){try{h[j++]()}catch(err){}continue}else if(!h[j].finished){if(O(h[j]))continue;break}j++}if(j==h.length){w=false;k=false}}function V(){if(!k||!k.scripts){h.push(k={scripts:[],finished:true})}}e={script:function(){for(var f=0;f<arguments.length;f++){(function(a,c){var b;if(!H(a)){c=[a]}for(var d=0;d<c.length;d++){V();a=c[d];if(G(a))a=a();if(!a)continue;if(H(a)){b=[].slice.call(a);b.unshift(d,1);[].splice.apply(c,b);d--;continue}if(typeof a=="string")a={src:a};a=s(a,{ready:false,ready_cb:T,finished:false,finished_cb:U});k.finished=false;k.scripts.push(a);S(g,a,k,(Q&&w));w=true;if(g[z])e.wait()}})(arguments[f],arguments[f])}return e},wait:function(){if(arguments.length>0){for(var a=0;a<arguments.length;a++){h.push(arguments[a])}k=h[h.length-1]}else k=false;x();return e}};return{script:e.script,wait:e.wait,setOptions:function(a){s(a,g);return e}}}m={setGlobalDefaults:function(a){s(a,l);return m},setOptions:function(){return v().setOptions.apply(null,arguments)},script:function(){return v().script.apply(null,arguments)},wait:function(){return v().wait.apply(null,arguments)},queueScript:function(){n[n.length]={type:"script",args:[].slice.call(arguments)};return m},queueWait:function(){n[n.length]={type:"wait",args:[].slice.call(arguments)};return m},runQueue:function(){var a=m,c=n.length,b=c,d;for(;--b>=0;){d=n.shift();a=a[d.type].apply(null,d.args)}return a},noConflict:function(){o.$LAB=K;return m},sandbox:function(){return J()}};return m}o.$LAB=J();(function(a,c,b){if(document.readyState==null&&document[a]){document.readyState="loading";document[a](c,b=function(){document.removeEventListener(c,b,false);document.readyState="complete"},false)}})("addEventListener","DOMContentLoaded")})(this);
+	
+	$LAB
+	.script("inc/javascript/jquery.tinyMap.js")
+	.wait(function(){
+		index_init();
+	});
+}
+function init(){
+	setTimeout(function(){
+		if(window['g']['online_status']==true)
+		{
+			preset_Config();			
+			//重新定義按下回上頁鍵
+			document.removeEventListener("backbutton", function(e) {
+			}, false);
+			document.addEventListener("backbutton", function(e) {
+				//e.preventDefault();
+				if (confirm("你確定要離開我的麻吉系統嗎??") == true) {
+					navigator.app.exitApp();
+					return true;
+				} else {
+					return false;
+				}
+			}, true);						
+		    var script = document.createElement('script');
+		    script.type = 'text/javascript';
+		    script.src = 'https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&' +
+		    'callback=loadLab';
+		    document.body.appendChild(script); 	
+		}
+		else
+		{
+			setTimeout(function(){
+				init();
+			},500);
+		}
+	},1200)		    
+}
+function onDeviceReady() {
+	$(document).ready(function(){				
+		init();	
+	});	
+}
+</script>
+</head>
+<body onLoad="Load();">
+<center>  
+  <div id="map" class="tinyMap"></div>
+  <div id="theblock" name="theblock"></div>
+  <div id="gps" name="gps"></div>
+  <div id="car" name="car"></div>
+  <div id="direct" name="direct"></div>
+  <div id="direct_text" name="direct_text"><!-- 前進方向--></div>
+  <div id="gps_focus_on_off_btn" name="gps_focus_on_off_btn"></div>	  
+
+  <form id="theform" style="display:none;position:absolute;" action="http://3wa.tw/webservice/api.php?mode=getMapDirect" method="post">
+    <div style="border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
+    <center>
+    	<h2>路線規劃</h2>
+	</center>
+	<table border="0" cellpadding="0" cellspacing="0" width="100%">
+		<tr>
+			<th>
+				起始位置
+			</th>
+			<td>
+				<input type="text" id="START" name="START" value="台中市南區新和街3號">
+			</td>
+			<td>
+				<img id="form_book_s" name="form_book_s">
+			</td>
+			<td>
+				<img id="form_now_place_s" name="form_now_place_s">
+			</td>
+		</tr>
+		<tr>
+			<th>
+				目標位置
+			</th>
+			<td>				
+				<input type="text" id="END" name="END" value="">
+			</td>
+			<td>
+				<img id="form_book_e" name="form_book_e">
+			</td>
+			<td>
+				<img id="form_now_place_e" name="form_now_place_e">
+			</td>
+		</tr>
+		<tr>
+			<th>
+				路　　過
+			</th>
+			<td colspan="3">
+				<input type="text" id="WAY" name="WAY" value="">
+			</td>
+		</tr>
+		<tr>
+			<td colspan="4" align="right">
+				(路過地請用「|」分格)
+			</td>
+		</tr>
+		<tr>
+			<th>
+				交通工具
+			</th>
+			<td colspan="3">
+				<select name="HOW" id="HOW" data-role="slider" data-mini="true">
+					<option value="走路" selected>走路</option>
+					<option value="汽車">汽車</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<th>
+				高速公路
+			</th>
+			<td colspan="3">
+				<select name="HIGHWAY" id="HIGHWAY" data-role="slider" data-mini="true">
+					<option value="FALSE" selected>避免</option>
+					<option value="TRUE">優先</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="4" align="center">
+				<table border="0">
+					<tr>
+						<td align="right" width="33%">
+							<input id="GO_BTN" type="button" value="查詢" style="background-color:green;">							
+						</td>
+						<td width="34%">
+							&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						</td>
+						<td align="left" width="33%">
+							<input id="CANCEL_BTN" type="button" value="取消" style="background-color:red;">
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>							
+	</table>                                                               
+    </div>      
+ </form>
+</center>
+<!-- TEMPLATES -->
+<div id="t_showBook" style="display:none;position:absolute;">
+	<div id="{e_kind}_showBook_div" style="width:{width}px;height:{height}px;">
+		<center>
+			<h2>位置選擇</h2>
+		</center>
+		<table border="0" cellpadding="0" cellspacing="0" width="100%">
+			<thead>
+			<tr>
+				<th>選擇</th>
+				<th>地址</th>
+				<th>刪除</th>
+			</tr>
+			</thead>					
+			<tbody>
+				<tr>
+					<td colspan="3">
+						<div style="width:100%;overflow-y:scroll;height:300px;" id="{e_kind}_for_book_tbody">
+						</div>
+					</td>
+				</tr>
+			</tbody>
+			</div>
+			<tfoot id="{e_kind}_for_book_tfoot" style="display:none;">
+				<tr>
+					<td><input req="{ADDRESS}" name="{e_kind}_CHOICE_BTN" type="button" value="選擇" style="background-color:green;"></td>
+					<td><span>{ADDRESS}</span></td>
+					<td><input req="{ID}" name="{e_kind}_DELETE_BTN" type="button" value="刪除" style="background-color:red;"></td>
+				</tr>
+			</tfoot>
+		</table>
+		<hr>	
+		<center>
+			<h2>新建位置</h2>
+		</center>
+		<table border="0" cellpadding="0" cellspacing="0" width="100%">
+			<tr>
+				<td>
+					{c_kind}位置
+				</td>
+				<td>
+					<input type="text" id="{e_kind}_PLACE_INPUT">
+				</td>
+			</tr>
+		</table>		
+		<table border="0" cellpadding="0" cellspacing="0" width="100%">
+			<tr>
+				<td align="center" width="33%">
+					<input type="button" id="{e_kind}_SAVE_BTN" value="儲存"  style="background-color:green;">
+				</td>
+				<td width="34%">&nbsp;　&nbsp;</td>
+				<td align="center" width="33%">
+					<input type="button" id="{e_kind}_CANCEL_BTN" value="取消" style="background-color:red;">
+				</td>
+			</tr>
+		</table>				
+	</div>	
+</div>
+</body>
+</html>		

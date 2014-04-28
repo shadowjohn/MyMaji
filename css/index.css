@@ -1,0 +1,144 @@
+html,body{
+	width: 100%;
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: hidden;
+	padding: 0px;
+	margin: 0px;
+	font-family: "微軟正黑體";
+	background-color: #000;	
+}
+/*
+	防止長壓出現尋找列
+*/
+*{
+	
+	/*-webkit-user-select: none; /* disable text select */
+	/*-webkit-touch-callout: none; /* disable callout, image save panel (popup) */
+	
+	/* "turn off" link highlight */
+	
+	-webkit-tap-highlight-color: transparent; 
+  	/*-webkit-backface-visibility: hidden;
+  	-webkit-perspective: 1000;*/	
+	
+	-webkit-transform: translateZ(100);
+	-webkit-tap-highlight-color: rgba(0,0,0,0);
+	/*-webkit-touch-callout: none; 
+	-webkit-text-size-adjust: none; 
+	-webkit-user-select: none; */
+}
+canvas{
+	width:100%;
+	overflow:hidden;
+}
+  html,body{  	 
+  	 overflow:hidden;
+  	 padding:0px;
+  	 margin:0px;
+  	 width:100%;
+  	 height:100%;
+  }
+  #map{
+  	position:fixed;
+  	left:0px;
+  	top:0px;
+  	z-index:0;
+  } 
+  #gps{
+    position:fixed;
+  	/*background-image:url('images/gps.png');*/
+  	background-repeat:no-repeat;
+  	background-size:100% 100%;
+  	width:42px;
+  	height:39px;
+  	left:3px;
+  	bottom:3px;
+  	z-index:2;
+  }
+  #car{
+    position:fixed;
+  	/*background-image:url('images/car.png');*/
+  	background-repeat:no-repeat;
+  	background-size:100% 100%;
+  	width:42px;
+  	height:39px;
+  	left:50px;
+  	bottom:3px;
+  	z-index:2;
+  }
+ #gps_focus_on_off_btn{
+    position:fixed;
+  	/*background-image:url('images/focus_off.png');*/
+  	background-repeat:no-repeat;
+  	background-size:100% 100%;
+  	width:50px;
+  	height:50px;
+  	right:1px;
+  	bottom:10px;
+  	z-index:2;
+ }
+#direct{
+    position:absolute;
+  	/*background-image:url('images/direct.png');*/
+  	background-repeat:no-repeat;
+  	background-size:100% 100%;
+  	/*width:42px;
+  	height:39px;
+  	left:97px;
+  	bottom:3px;*/
+  	z-index:1;
+  	opacity:0.1;
+  	display:none;
+}  
+#direct_text{
+  position:fixed;  	  	
+	width:60px;
+	height:15px;
+	left:90px;
+	font-size:12px;
+	bottom:1px;
+	z-index:3;
+}
+strong .label{
+  background-color:white;
+  color:black;  
+} 
+.gm-style-iw{
+  background-color:white;
+  color:black;
+  width:200px;
+  overflow:auto;
+}
+#theform{
+	background-color:rgba(0,0,0,0.5);
+	color:white;
+	position:fixed;
+	left:0px;
+	top:0px;
+	z-index:2;
+	width:100%;  	
+}
+input[type='button']{
+	 font-size:32px;
+}
+input[type='radio']{
+	 font-size:36px;
+}
+#theblock{
+	background-color:transparent;
+	left:0px;
+	bottom:0px;
+	position:fixed;
+	z-index:1;
+	width:100%;
+	height:50px;
+}
+th{
+  text-align:center;
+  background-color:brown;
+  color:white;
+  font-weight:bold;
+  padding:3px;
+  font-size:16px;
+}
