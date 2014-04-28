@@ -258,13 +258,13 @@ function load_book(dom){
 
 }
 function Load() {
-	document.addEventListener("online", onOnLine, false);
+	//document.addEventListener("online", onOnLine, false);
 	document.addEventListener("offline", onOffLine, false);	
 	document.addEventListener("deviceready", onDeviceReady, false);
 
 }
 function onOnLine(){
-	var networkState = navigator.connection.type;
+	/*var networkState = navigator.connection.type;
 	var states = {};
     states[Connection.UNKNOWN]  = 'Unknown connection';
     states[Connection.ETHERNET] = 'Ethernet connection';
@@ -274,8 +274,23 @@ function onOnLine(){
     states[Connection.CELL_4G]  = 'Cell 4G connection';
     states[Connection.CELL]     = 'Cell generic connection';
     states[Connection.NONE]     = 'No network connection';
-    //alert('Connection type: ' + states[networkState]);	
-	window['g']['online_status']=true;
+    //alert('Connection type: ' + states[networkState]);*/
+    var URL = sprintf("%s?mode=test_connect",window['webservice']);    
+    $.ajax({
+        url: URL,
+        type: "POST",
+        data: '',
+        async: true,
+        success: function(html){  
+          window['g']['online_status']=true;
+        },
+        error: function(){
+        	alert('無法連線...');
+        }
+    });  
+   
+    
+	
 }
 function onOffLine(){
 	alert("網路不通，請確認可以連線吧...");
@@ -447,10 +462,12 @@ function loadLab(){
 	});
 }
 function init(){
-	setTimeout(function(){
+	preset_Config();
+	setTimeout(function(){		
+		onOnLine();
 		if(window['g']['online_status']==true)
 		{
-			preset_Config();			
+						
 			//重新定義按下回上頁鍵
 			document.removeEventListener("backbutton", function(e) {
 			}, false);
