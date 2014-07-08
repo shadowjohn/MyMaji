@@ -344,6 +344,7 @@
                     }
                     polyline = new google.maps.Polyline({
                         'path': coords,
+                        'geodesic': true, //By John
                         'strokeColor': opt.polyline.color || '#FF0000',
                         'strokeOpacity': 1.0,
                         'strokeWeight': opt.polyline.width || 2
@@ -667,6 +668,19 @@
                     }
                 });
             }
+            
+            
+          //初次載入
+            if(window['g']['gmap']=="")
+            {
+            	window['g']['gmap'] = self.map;
+            }
+            
+
+
+    
+            
+            
         },
         /**
          * Method: Google Maps PanTo

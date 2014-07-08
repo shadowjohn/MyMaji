@@ -1,6 +1,6 @@
 // 本程式是抓經緯度相關的
-function geolocation_init(timeout_value) {	
-		navigator.geolocation.getCurrentPosition(function(position) {
+function geolocation_init() {	
+		navigator.geolocation.watchPosition(function(position) {
 			window['g']['me_lat']=position.coords.latitude;
 			window['g']['me_lng']=position.coords.longitude;	
 			//檢查追蹤			
@@ -10,16 +10,11 @@ function geolocation_init(timeout_value) {
 				showMe();
 				showRoad();
 			}
-			setTimeout(function(){		
-				geolocation_init(15000);
-			},1000);
 		}, function() {			
-			setTimeout(function(){			
-				geolocation_init(15000);
-			},3000);
+			//等待定位中
 		}, {
-			maximumAge : 5000,
-			timeout : timeout_value,
+			maximumAge : 3000,
+			timeout : 15000,
 			enableHighAccuracy : true
 		});			
 }

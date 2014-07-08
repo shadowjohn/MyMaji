@@ -7,7 +7,7 @@ package tw.MyMaji;
 
 import org.apache.cordova.*;
 
-import tw.myGoogleMap.R;
+import tw.MyMaji.R;
 
 //import android.app.AlertDialog;
 import android.app.ProgressDialog;

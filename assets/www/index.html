@@ -2,15 +2,15 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<title>羽山的地圖</title>
-<meta name="viewport" content="width=device-width; initial-scale=1.0;minimum-scale=1.0; maximum-scale=1.0; user-scalable=0;"/>
+<title>我的麻吉</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=0;"/>
 
 <script type="text/javascript" src="inc/javascript/cordova.js"></script>
 <script type="text/javascript" src="inc/javascript/jquery-1.8.3.min.js"></script>
 <!--PHP函式庫-->
 <script type="text/javascript" src="inc/javascript/php.js"></script>
 <!--jquery myBox函式庫-->
-<script type="text/javascript" src="inc/javascript/mybox-0.1.min.js"></script>
+<script type="text/javascript" src="inc/javascript/mybox-0.2.min.js"></script>
 <!--Memory -->
 <script type="text/javascript" src="inc/javascript/memory.js"></script>
 <!--Debug -->
@@ -18,6 +18,7 @@
 
 <!--未分類函式庫-->
 <script type="text/javascript" src="inc/javascript/include.js"></script>
+<script type="text/javascript" src="inc/javascript/config.js"></script>
 
 <!--載入index.css-->
 <link rel="stylesheet" href="css/reset.css" />
@@ -33,22 +34,10 @@
 <!-- 載入羅盤功能 -->
 <script type="text/javascript" src="inc/javascript/compass.js"></script>
 
-<!--拿來讀 config.js -->
-<script type="text/javascript" src="inc/javascript/config.js"></script>
-
 <!--加速click功能 -->
 <script type="text/javascript" src="inc/javascript/fastclick.js"></script>	
 			
 <script language="javascript">
-window['g'] = {
-	token:'token',
-	online_status:false,
-	me_lat:'',
-	me_lng:'',
-	road:'',
-	focus_me:false,
-	direct:''
-};
 function cleanAll(){
   $('#map').tinyMap('clear', 'polyline,circle,direction,marker');
   $('#map').tinyMap('clear', ['polyline', 'circle', 'direction', 'marker']);
@@ -294,14 +283,14 @@ function onOnLine(){
 }
 function onOffLine(){
 	alert("網路不通，請確認可以連線吧...");
-	location.reload();
+	//location.reload();
 }
 function index_init(){
     $(document).bind("mobileinit", function () { $.mobile.defaultPageTransition = 'none'; });
     FastClick.attach(document.body);
 	window['wh']=getWindowSize();				
 	
-	geolocation_init(15000);
+	geolocation_init();
 	window['g']['direct']=$("#direct");
 	window['g']['direct'].css({
 		'width':(window['wh']['width']/2)+'px',
@@ -315,8 +304,7 @@ function index_init(){
 	window['g']['direct'].show();
 	window['g']['direct'].css({
 		'pointer-events':'none'	
-	});
-
+	});	
 	compass_init(100);
 	
 	$("#map").css({
@@ -332,9 +320,13 @@ function index_init(){
 	     zoom: 12,
 	     panControl:false,
 	     navigationControl:false,
-	     zoomControl:false,
+	     zoomControl:false,								
+		 streetViewControl:false, //是否顯示街景控制器
+ 		 mapTypeControl:false, //是否可切換地圖類型。			
+		 mapTypeId:'roadmap',			     
 	     loading:"Google 地圖載入中..."
 	});
+	
 	//$("html,body").css({
 	//	'pointer-events':'none'   
 	//});		
@@ -343,10 +335,10 @@ function index_init(){
 	  	cleanAll();
 	  	showMe();
 	  	showRoad();
-	});		
+	});			
 	$("#gps").css({
 		'background-image':'url(images/gps.png)'
-	});
+	});	
 	$("#car").css({
 		'background-image':'url(images/car.png)'
 	});
@@ -461,42 +453,41 @@ function loadLab(){
 		index_init();
 	});
 }
-function init(){
-	preset_Config();
-	setTimeout(function(){		
-		onOnLine();
-		if(window['g']['online_status']==true)
-		{
-						
-			//重新定義按下回上頁鍵
-			document.removeEventListener("backbutton", function(e) {
-			}, false);
-			document.addEventListener("backbutton", function(e) {
-				//e.preventDefault();
-				if (confirm("你確定要離開我的麻吉系統嗎??") == true) {
-					navigator.app.exitApp();
-					return true;
-				} else {
-					return false;
-				}
-			}, true);						
-		    var script = document.createElement('script');
-		    script.type = 'text/javascript';
-		    script.src = 'https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&' +
-		    'callback=loadLab';
-		    document.body.appendChild(script); 	
-		}
-		else
-		{
-			setTimeout(function(){
-				init();
-			},500);
-		}
-	},1200)		    
+function init(){	
+	
+	onOnLine();
+	if(window['g']['online_status']==true)
+	{
+		//重新定義按下回上頁鍵
+		document.removeEventListener("backbutton", function(e) {
+		}, false);
+		document.addEventListener("backbutton", function(e) {
+			//e.preventDefault();
+			if (confirm("你確定要離開我的麻吉系統嗎??") == true) {
+				navigator.app.exitApp();
+				return true;
+			} else {
+				return false;
+			}
+		}, true);						
+	    var script = document.createElement('script');
+	    script.type = 'text/javascript';
+	    script.src = 'https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&' +
+	    'callback=loadLab';
+	    document.body.appendChild(script); 	
+	}
+	else
+	{
+		setTimeout(function(){
+			init();
+		},500);
+	}    
 }
 function onDeviceReady() {
-	$(document).ready(function(){				
-		init();	
+	$(document).ready(function(){
+		setTimeout(function(){
+			init();
+		},3000);
 	});	
 }
 </script>
