@@ -48,7 +48,7 @@ function updateMyPlace(){
 	m['lat']=enPWD_string(window['g']['me_lat'],window['PWD_CODE']);
 	m['long']=enPWD_string(window['g']['me_lng'],window['PWD_CODE']);
 	m['id'] = enPWD_string(window['me_data']['id'],window['PWD_CODE']);
-	myAjax_async(URL,m,"",function(){
+	myAjax_async(URL,m,function(){
 		
 	});
 }

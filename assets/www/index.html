@@ -479,10 +479,13 @@ function loadLab(){
 			if(window['me_data']['is_registered']=="YES")
 			{
 				//回報最後使用時間~
+				var URL=sprintf("%s?mode=updateLogin",window['webservice']);
+				var m = new Object();
+				m['id'] = enPWD_string( window['me_data']['id'], window['PWD_CODE'] );
+				myAjax_async(URL,m,function(result){					
+				});
 			}
-		}
-		
-		
+		}				
 	});
 }
 function init(){	
@@ -706,7 +709,7 @@ function onDeviceReady() {
 			</tr>
 			<tr>
 				<th>手機號碼</th>
-				<td><input type="text" id="text_register_phone_number" name="text_register_phone_number" placeholder="請輸入手機號碼" pattern="[0-9]{10}" maxlength="10" ></td>
+				<td><input type="tel" id="text_register_phone_number" name="text_register_phone_number" placeholder="請輸入手機號碼" pattern="[0-9]{10}" maxlength="10" ></td>
 			</tr>
 			<tr>
 				<th>匿　　稱</th>

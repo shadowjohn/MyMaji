@@ -83,7 +83,7 @@ function new_register_init(){
 			m['nick']=enPWD_string(姓名,window['PWD_CODE']);
 			m['nickname']=enPWD_string(匿稱,window['PWD_CODE']);
 			dialogOn("註冊中...",function(){
-				myAjax_async(URL,m,"",function(result){
+				myAjax_async(URL,m,function(result){
 					result = json_decode(result);
 					if(result['status']=="YES")
 					{						
@@ -199,7 +199,7 @@ function getFriendsLists()
 {
 	var en = enPWD_string( getMeData("phone_number"), window['PWD_CODE'] );
 	var URL=sprintf("%s?mode=getFriendsLists",window['webservice']);
-	myAjax_async(URL,"phone_number="+en,"",function(result){
+	myAjax_async(URL,"phone_number="+en,function(result){
 		result = dePWD_string(result,window['PWD_CODE']);
 		alert(result);
 	});
