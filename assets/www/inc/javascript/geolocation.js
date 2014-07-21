@@ -48,7 +48,7 @@ function updateMyPlace(){
 	m['lat']=enPWD_string(window['g']['me_lat'],window['PWD_CODE']);
 	m['long']=enPWD_string(window['g']['me_lng'],window['PWD_CODE']);
 	m['id'] = enPWD_string(getMeData('id'),window['PWD_CODE']);
-	myAjax_async(URL,m,function(){
-		
+	myAjax_async(URL,m,function(result){
+		window['g']['LAST_REPORT_PLACE_DATETIME']=date('Y-m-d H:i:s');
 	});
 }
