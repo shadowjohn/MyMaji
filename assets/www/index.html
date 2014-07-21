@@ -4,7 +4,6 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>我的麻吉</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=0;"/>
-
 <script type="text/javascript" src="inc/javascript/cordova.js"></script>
 <script type="text/javascript" src="inc/javascript/jquery-1.8.3.min.js"></script>
 <!--PHP函式庫-->
@@ -18,6 +17,7 @@
 
 <!--未分類函式庫-->
 <script type="text/javascript" src="inc/javascript/include.js"></script>
+<script type="text/javascript" src="inc/javascript/functions.js"></script>
 <script type="text/javascript" src="inc/javascript/config.js"></script>
 
 <!--載入index.css-->
@@ -27,12 +27,15 @@
 
 <!--載入jQuery-mobile-->
 <script  type="text/javascript" src="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.min.js"></script>
-<link rel="stylesheet" href="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.css" />
+<link rel="stylesheet" href="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.min.css" />
 
 <!-- 載入即時定位功能 -->
 <script type="text/javascript" src="inc/javascript/geolocation.js"></script>
 <!-- 載入羅盤功能 -->
 <script type="text/javascript" src="inc/javascript/compass.js"></script>
+
+<!--好友功能 -->
+<script type="text/javascript" src="inc/javascript/API/friends.js"></script>	
 
 <!--加速click功能 -->
 <script type="text/javascript" src="inc/javascript/fastclick.js"></script>	
@@ -301,6 +304,7 @@ function index_init(){
 		'left':(window['wh']['width']/4)+'px',
 		'top':(window['wh']['height']/4)+'px'
 	});
+	$(".show_div_class").hide();
 	window['g']['direct'].show();
 	window['g']['direct'].css({
 		'pointer-events':'none'	
@@ -342,6 +346,12 @@ function index_init(){
 	$("#car").css({
 		'background-image':'url(images/car.png)'
 	});
+	$("#friends").css({
+		'background-image':'url(images/friends.png)'
+	});
+	$("#camera").css({
+		'background-image':'url(images/camera.png)'
+	});
 	$("#gps_focus_on_off_btn").css({
 		'background-image':'url(images/focus_off.png)'
 	});
@@ -357,6 +367,7 @@ function index_init(){
 	},5000);
 	$("#car").unbind("click");
 	$("#car").click(function(){
+		$(".show_div_class").hide();
 		$("#theform").toggle();
 	});
 	//追蹤鈕
@@ -439,6 +450,16 @@ function index_init(){
 	$("#form_book_e").click(function(){			
 		load_book($(this));
 	});
+	//按下好友名單
+	$("#friends").unbind("click");
+	$("#friends").click(function(){
+		$(".show_div_class").hide();
+		if(isRegister(true))
+		{
+			$(".show_div_class").hide();
+			showFriendsLists();
+		}
+	});
 }
 function loadLab(){
 	/*! LAB.js (LABjs :: Loading And Blocking JavaScript)
@@ -451,6 +472,17 @@ function loadLab(){
 	.script("inc/javascript/jquery.tinyMap.js")
 	.wait(function(){
 		index_init();
+		
+		//非初次使用了??
+		if(getMemory("me_data")!=null)
+		{
+			if(window['me_data']['is_registered']=="YES")
+			{
+				//回報最後使用時間~
+			}
+		}
+		
+		
 	});
 }
 function init(){	
@@ -487,7 +519,7 @@ function onDeviceReady() {
 	$(document).ready(function(){
 		setTimeout(function(){
 			init();
-		},3000);
+		},1500);
 	});	
 }
 </script>
@@ -498,11 +530,13 @@ function onDeviceReady() {
   <div id="theblock" name="theblock"></div>
   <div id="gps" name="gps"></div>
   <div id="car" name="car"></div>
+  <div id="friends" name="friends"></div>
+  <div id="camera" name="camera"></div>
   <div id="direct" name="direct"></div>
   <div id="direct_text" name="direct_text"><!-- 前進方向--></div>
   <div id="gps_focus_on_off_btn" name="gps_focus_on_off_btn"></div>	  
 
-  <form id="theform" style="display:none;position:absolute;" action="http://3wa.tw/webservice/api.php?mode=getMapDirect" method="post">
+  <form id="theform" class="show_div_class" style="display:none;position:absolute;" action="http://3wa.tw/webservice/api.php?mode=getMapDirect" method="post">
     <div style="border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
     <center>
     	<h2>路線規劃</h2>
@@ -593,7 +627,112 @@ function onDeviceReady() {
  </form>
 </center>
 <!-- TEMPLATES -->
-<div id="t_showBook" style="display:none;position:absolute;">
+<div id="t_FriendsLists" class="show_div_class" style="display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
+	<!--好友名單-->
+	<div id="FriendsLists_div" style="width:{width}px;height:{height}px;">
+	<center>
+		<h2>好友名單</h2>
+	</center>
+	</div>
+</div>
+<div id="t_register" class="show_div_class" style="background-color:#227433;display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
+	<!--登入視窗-->	
+	<center>
+		<h2>登入方式</h2>	
+	</center>
+	<table border="0" cellpadding="0" cellspacing="0" width="100%">
+		<tbody>
+			<tr>
+				<td><input type="button" id="btn_new_login" value="新用戶註冊"></td>					
+			</tr>
+			<tr>
+				<td><input type="button" id="btn_old_login" value="舊用戶登入"></td>					
+			</tr>
+			<tr>
+				<td><input type="button" id="btn_new_old_cancel" value="取消"></td>					
+			</tr>		
+		</tbody>
+	</table>
+</div>
+<div id="t_register_old" class="show_div_class" style="background-color:#227433;display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
+	<!--登入視窗-->	
+	<center>
+		<h2>登入</h2>	
+	</center>
+	<table border="0" cellpadding="0" cellspacing="0" width="100%">
+		<thead>
+			<tr>
+				<th>項目</th>
+				<th>資料</th>		
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<th>手機號碼</th>
+				<td><input type="tel" id="text_login_phone_number" name="text_login_phone_number" placeholder="請輸入手機號碼" pattern="[0-9]{10}" maxlength="10" ></td>
+			</tr>
+			<tr>			
+				<th>密　　碼</th>
+				<td><input type="password" id="password_login_password" name="password_login_password"></td>			
+			</tr>
+			<tr>
+				<td colspan="2">
+					<center>
+						<input type="button" id="btn_login_done" name="btn_login_done" value="登入">
+						&nbsp;&nbsp;&nbsp;
+						<input type="button" id="btn_login_cancel" name="btn_login_cancel" value="取消">
+					</center>
+				</td>
+			</tr>			
+		</tbody>
+	</table>
+</div>
+<div id="t_register_new" class="show_div_class" style="background-color:#227433;display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
+	<!--註冊視窗-->	
+	<center>
+		<h2>新使用者資訊</h2>
+	</center>
+	<table border="0" cellpadding="0" cellspacing="0" width="100%">
+		<thead>
+			<tr>
+				<th>項目</th>
+				<th>資料</th>		
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<th>姓　　名</th>
+				<td><input type="text" id="text_register_name" name="text_register_name" placeholder="請輸入姓名"></td>
+			</tr>
+			<tr>
+				<th>手機號碼</th>
+				<td><input type="text" id="text_register_phone_number" name="text_register_phone_number" placeholder="請輸入手機號碼" pattern="[0-9]{10}" maxlength="10" ></td>
+			</tr>
+			<tr>
+				<th>匿　　稱</th>
+				<td><input type="text" id="text_register_nickname" name="text_register_nickname" placeholder="請輸入匿稱"></td>
+			</tr>
+			<tr>
+				<th>密　　碼</th>
+				<td><input type="password" id="password_register_password" name="text_register_password"></td>
+			</tr>
+			<tr>
+				<th>密碼確認</th>
+				<td><input type="password" id="password_register_password_chk" name="password_register_password_chk"></td>
+			</tr>
+			<tr>
+				<td colspan="2">
+					<center>
+						<input type="button" id="btn_register_done" name="btn_register_done" value="註冊">
+						&nbsp;&nbsp;&nbsp;
+						<input type="button" id="btn_register_cancel" name="btn_register_cancel" value="取消">
+					</center>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div id="t_showBook" class="show_div_class" style="display:none;position:absolute;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
 	<div id="{e_kind}_showBook_div" style="width:{width}px;height:{height}px;">
 		<center>
 			<h2>位置選擇</h2>

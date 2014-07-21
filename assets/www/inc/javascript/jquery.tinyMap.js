@@ -183,14 +183,68 @@
         /**
          * Google Maps options
          * @type {Object}
+         * http://stackoverflow.com/questions/7396722/hide-local-listings-from-google-maps-api
+         * by John
+         * 關掉畫面的飯店學校啊... 加 styles
+         * attraction", "business", "government", "medical", "park", "place_of_worship", "school", "sports_complex"];
          */
         this.GoogleMapOptions = {
             'center': new google.maps.LatLng(this.options.center.x, this.options.center.y),
             'control': this.options.control,
             'disableDefaultUI': this.options.disableDefaultUI,
             'draggable': this.options.draggable,
-            'keyboardShortcuts': this.options.keyboardShortcuts,
-            'mapTypeId': google.maps.MapTypeId[this.options.mapTypeId.toUpperCase()],
+            'keyboardShortcuts': this.options.keyboardShortcuts,            
+            'mapTypeId': google.maps.MapTypeId[this.options.mapTypeId.toUpperCase()],            
+            'styles':[ //john 改
+					  { 
+					    featureType: "poi.attraction",
+					    stylers: [
+					      { visibility: "off" }
+					    ]   
+					  },
+					  { 
+						    featureType: "poi.business",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					   { 
+						    featureType: "poi.government",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					   { 
+						    featureType: "poi.medical",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					   { 
+						    featureType: "poi.park",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					   { 
+						    featureType: "poi.place_of_worship",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					   { 
+						    featureType: "poi.school",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					   { 
+						    featureType: "poi.sports_complex",
+						    stylers: [
+						      { visibility: "off" }
+						    ]   
+					   },
+					],
             'mapTypeControl': this.options.mapTypeControl,
             'mapTypeControlOptions': {
                 'position': google.maps.ControlPosition[this.options.mapTypeControlOptions.position],

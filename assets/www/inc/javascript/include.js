@@ -64,3 +64,46 @@ function myAjax_async(url,postdata,func)
       }
   });  
 }
+//加密與解密
+function enPWD_string( $str, $key ) {
+  $str = base64_encode($str);
+  $key = base64_encode($key); 
+  $xored = "";
+  for ($i=0,$max_i=strlen($str);$i<$max_i;$i++) {
+    $a = ord(substr($str,$i,1));      
+    for ($j=0,$max_j=strlen($key);$j<$max_j;$j++) {      
+      $k = ord(substr($key,$j,1));
+      $a = $a ^ $k;
+    }
+    $xored = sprintf("%s%s",$xored,chr($a));
+  }       
+  return base64_encode($xored);
+}
+function dePWD_string( $str, $key ) {
+  $str = base64_decode($str);    
+  $key = base64_encode($key);
+  $xored = "";
+  for ($i=0,$max_i=strlen($str);$i<$max_i;$i++) {
+    $a = ord(substr($str,$i,1));
+    for ($j=strlen($key)-1;$j>=0;$j--) {    
+      $k = ord(substr($key,$j,1));
+      $a = $a ^ $k;
+    }
+    $xored = sprintf("%s%s",$xored,chr($a));
+  }   
+  $xored = base64_decode($xored);
+  return $xored;
+}
+function ValidPhone(phonenum)
+{
+  //驗證電話號碼 09xxxxxxxx
+  var tel=/^(09)\d{8}$/;
+  if(!tel.test(phonenum))
+  {    
+    return false;
+  } 
+  else
+  {
+    return true;
+  }
+}

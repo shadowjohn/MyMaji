@@ -51,6 +51,7 @@ final public class MyMajiActivity extends DroidGap {
 		super.appView.setAlwaysDrawnWithCacheEnabled(false);
 		super.appView.setLongClickable(true);
 		super.appView.setClipChildren(false);
+		super.appView.setKeepScreenOn(true);
 		//super.appView.setLayerType(View.LAYER_TYPE_NONE, null);
 		super.loadUrl("file:///android_asset/www/index.html");	
 	    super.appView.setWebViewClient(new CordovaWebViewClient(this, super.appView) {
