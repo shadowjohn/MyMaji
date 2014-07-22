@@ -38,7 +38,7 @@ function geolocation_init() {
 	}, {
 		maximumAge : 3000,
 		timeout : 15000,
-		enableHighAccuracy : false
+		enableHighAccuracy : true
 	});			
 }
 function updateMyPlace(){
