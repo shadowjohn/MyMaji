@@ -1,3 +1,0 @@
-CREATE TABLE IF NOT EXISTS "歷史位置資料表" ("id" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "address" VARCHAR(255));
-INSERT INTO `歷史位置資料表`(`address`)VALUES('台中市南區新和街3號');
-INSERT INTO `歷史位置資料表`(`address`)VALUES('逢甲大學');

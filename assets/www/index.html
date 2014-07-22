@@ -148,7 +148,7 @@ function load_book(dom){
 	}	
 	tmp=str_replace("{e_kind}",kind,tmp);
 	tmp=str_replace("{width}",window['wh']['width']*90/100,tmp);
-	tmp=str_replace("{height}",window['wh']['height']*90/100,tmp);
+	tmp=str_replace("{height}",window['wh']['height']*90/100,tmp);	
 	dialogOn(tmp,function(){
 			$("#"+kind+"_CANCEL_BTN").unbind("click");
 			$("#"+kind+"_CANCEL_BTN").click(function(){
@@ -160,14 +160,15 @@ function load_book(dom){
 			
 			
 			var tbody_tmp=new Array();			
-			var URL = sprintf("%s?mode=getPaths",window['webservice']);			
+			var URL = sprintf("%s?mode=getPaths",window['webservice']);
+			var m = new Object();
+			m['my_id']=enPWD_string( getMeData("id") , window['PWD_CODE'] );
 			var tmp = myAjax(
 				URL,
-				""
-			);
-			//alert(tmp);
+				m
+			);		
 			var tmp = json_decode(tmp);
-			if(tmp['STATUS']!='1')
+			if(tmp['STATUS']!='YES')
 			{
 				dialogOff();
 				return;
@@ -201,12 +202,14 @@ function load_book(dom){
 				if(confirm("你確定要刪除嗎?")==true){
 					var id = $(this).attr('req');
 					var URL = sprintf("%s?mode=delPath",window['webservice']);
+					var m = new Object();
+					m['path_id']=enPWD_string( id , window['PWD_CODE'] );
+					m['my_id']=enPWD_string( getMeData("id") , window['PWD_CODE'] );
 					var tmp = myAjax(URL,
-									"&token="+encodeURIComponent(window['g']['token'])+
-									"&id="+id
+									m
 								);
 					tmp = json_decode(tmp);
-					if(tmp['STATUS']!='1')
+					if(tmp['STATUS']!='YES')
 					{
 						alert("刪除失敗...");
 					}	
@@ -234,13 +237,15 @@ function load_book(dom){
 			$("#"+kind+"_SAVE_BTN").unbind("click");
 			$("#"+kind+"_SAVE_BTN").click(function(){
 				var data = addslashes(stripslashes(trim($("#"+kind+"_PLACE_INPUT").val())));				
-				var URL = sprintf("%s?mode=savePath",window['webservice']);					
+				var URL = sprintf("%s?mode=savePath",window['webservice']);
+				var m = new Object();
+				m['address']=enPWD_string( data, window['PWD_CODE'] );
+				m['my_id']=enPWD_string( getMeData("id"), window['PWD_CODE'] );
 				var tmp = myAjax(URL,
-					"&token="+encodeURIComponent(window['g']['token'])+
-					"&address="+encodeURIComponent(data)
+					m
 				);
 				tmp = json_decode(tmp);
-				if(tmp['STATUS']!='1')
+				if(tmp['STATUS']!='YES')
 				{
 					alert("儲存失敗...");
 				}		
@@ -443,12 +448,20 @@ function index_init(){
 	}); 
 	//按下歷史紀錄鈕
 	$("#form_book_s").unbind("click");
-	$("#form_book_s").click(function(){			
-		load_book($(this));
+	$("#form_book_s").click(function(){
+		//$(".show_div_class").hide();
+		if(isRegister(true))
+		{
+			load_book($(this));
+		}				
 	});
 	$("#form_book_e").unbind("click");
-	$("#form_book_e").click(function(){			
-		load_book($(this));
+	$("#form_book_e").click(function(){
+		//$(".show_div_class").hide();
+		if(isRegister(true))
+		{			
+			load_book($(this));
+		}				
 	});
 	//按下好友名單
 	$("#friends").unbind("click");
