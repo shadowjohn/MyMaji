@@ -2,7 +2,7 @@
 function geolocation_init() {	
 	navigator.geolocation.getCurrentPosition(function(position) {
 		window['g']['me_lat']=position.coords.latitude;
-		window['g']['me_lng']=position.coords.longitude;	
+		window['g']['me_lon']=position.coords.longitude;	
 		//檢查追蹤			
 		if(window['g']['focus_me']==true)
 		{
@@ -46,7 +46,7 @@ function updateMyPlace(){
 	var URL=sprintf("%s?mode=updateMyPlace",window['webservice']);
 	var m = new Object();
 	m['lat']=enPWD_string(window['g']['me_lat'],window['PWD_CODE']);
-	m['long']=enPWD_string(window['g']['me_lng'],window['PWD_CODE']);
+	m['long']=enPWD_string(window['g']['me_lon'],window['PWD_CODE']);
 	m['id'] = enPWD_string(getMeData('id'),window['PWD_CODE']);
 	myAjax_async(URL,m,function(result){
 		window['g']['LAST_REPORT_PLACE_DATETIME']=date('Y-m-d H:i:s');

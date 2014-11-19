@@ -3,13 +3,17 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>我的麻吉</title>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=0;"/>
+<meta name="viewport" content="width=device-width, initial-scale=1,minimum-scale=1, maximum-scale=1, user-scalable=0" />
 <script type="text/javascript" src="inc/javascript/cordova.js"></script>
-<script type="text/javascript" src="inc/javascript/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="inc/javascript/jquery-2.1.1.min.js"></script>
+<!-- jquery-Animate-Easing -->
+<script type="text/javascript" src="inc/javascript/jquery.easing.js"></script>
 <!--PHP函式庫-->
 <script type="text/javascript" src="inc/javascript/php.js"></script>
 <!--jquery myBox函式庫-->
 <script type="text/javascript" src="inc/javascript/mybox-0.2.min.js"></script>
+<!-- jquery corner -->
+<script type="text/javascript" src="inc/javascript/jquery.corner.js"></script>
 <!--Memory -->
 <script type="text/javascript" src="inc/javascript/memory.js"></script>
 <!--Debug -->
@@ -26,20 +30,29 @@
 <link rel="stylesheet" href="css/index.css" />
 
 <!--載入jQuery-mobile-->
-<script  type="text/javascript" src="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.min.js"></script>
-<link rel="stylesheet" href="inc/javascript/jquery-mobile-1.4.2/jquery.mobile-1.4.2.min.css" />
+<script  type="text/javascript" src="inc/javascript/jquery-mobile-1.4.5/jquery.mobile-1.4.5.min.js"></script>
+<link rel="stylesheet" href="inc/javascript/jquery-mobile-1.4.5/jquery.mobile-1.4.5.min.css" />
 
-<!-- 載入即時定位功能 -->
+<!-- 載入即時定位功能-->
 <script type="text/javascript" src="inc/javascript/geolocation.js"></script>
-<!-- 載入羅盤功能 -->
+<!-- 載入羅盤功能-->
 <script type="text/javascript" src="inc/javascript/compass.js"></script>
 
-<!--好友功能 -->
+<!--好友功能-->
 <script type="text/javascript" src="inc/javascript/API/friends.js"></script>	
 
-<!--加速click功能 -->
+<!--聊天功能-->
+<script type="text/javascript" src="inc/javascript/API/chat.js"></script>
+
+<!--加速click功能-->
 <script type="text/javascript" src="inc/javascript/fastclick.js"></script>	
-			
+	
+<!--Ajax Progress-->
+<!--script type="text/javascript" src="inc/javascript/jquery.ajax-progress.js"></script-->
+
+<!--Native File-->
+<script type="text/javascript" src="inc/native_plugin_js/filePlugin.js"></script>
+
 <script language="javascript">
 function cleanAll(){
   $('#map').tinyMap('clear', 'polyline,circle,direction,marker');
@@ -53,7 +66,7 @@ function showMe(){
 		//});
 		$('#map').tinyMap('panto', {
 			x:window['g']['me_lat'], 
-			y:window['g']['me_lng']
+			y:window['g']['me_lon']
 		});
 		
 		
@@ -63,10 +76,10 @@ function showMe(){
 			    {
 					addr: [
 			                parseFloat(window['g']['me_lat']),
-			                parseFloat(window['g']['me_lng'])
+			                parseFloat(window['g']['me_lon'])
 			              ],
 			              text: '',
-			              //label: '<strong class="label">現在位置:<br>LAT:'+window['g']['me_lat']+"<br>LNG:"+window['g']['me_lng']+'</strong>',
+			              //label: '<strong class="label">現在位置:<br>LAT:'+window['g']['me_lat']+"<br>LNG:"+window['g']['me_lon']+'</strong>',
 			              label:'',
 			              css: 'me',
 			              icon: 'images/me.png'
@@ -261,7 +274,8 @@ function Load() {
 
 }
 function onOnLine(){
-	/*var networkState = navigator.connection.type;
+	/*
+	var networkState = navigator.connection.type;
 	var states = {};
     states[Connection.UNKNOWN]  = 'Unknown connection';
     states[Connection.ETHERNET] = 'Ethernet connection';
@@ -271,7 +285,8 @@ function onOnLine(){
     states[Connection.CELL_4G]  = 'Cell 4G connection';
     states[Connection.CELL]     = 'Cell generic connection';
     states[Connection.NONE]     = 'No network connection';
-    //alert('Connection type: ' + states[networkState]);*/
+    alert('Connection type: ' + states[networkState]);
+    */
     var URL = sprintf("%s?mode=test_connect",window['webservice']);    
     $.ajax({
         url: URL,
@@ -285,9 +300,7 @@ function onOnLine(){
         	alert('無法連線...');
         }
     });  
-   
-    
-	
+
 }
 function onOffLine(){
 	alert("網路不通，請確認可以連線吧...");
@@ -333,7 +346,10 @@ function index_init(){
 		 streetViewControl:false, //是否顯示街景控制器
  		 mapTypeControl:false, //是否可切換地圖類型。			
 		 mapTypeId:'roadmap',			     
-	     loading:"Google 地圖載入中..."
+	     loading:"Google 地圖載入中...",
+	     load:function(){	    	 
+	    	 $("#gps").trigger('click');
+	     }
 	});
 	
 	//$("html,body").css({
@@ -367,13 +383,110 @@ function index_init(){
 	$("#form_now_place_e").attr('src','images/gps.png');
 	$("#form_book_s").attr('src','images/book.png');
 	$("#form_book_e").attr('src','images/book.png');		
-	setTimeout(function(){
-		$("#gps").trigger('click');
-	},5000);
+
 	$("#car").unbind("click");
 	$("#car").click(function(){
 		$(".show_div_class").hide();
 		$("#theform").toggle();
+	});
+	//相機
+	$("#camera").unbind("click");
+	$("#camera").click(function(){
+		dialogOn("相機啟動中...",function(){
+			setTimeout(function(){
+				navigator.camera.getPicture(function(result){
+					//alert(result);
+					result=str_replace("file:///mnt","",result);
+					result=str_replace("content:/","",result);
+					result=str_replace("file:///storage","/storage",result);
+					//alert(result);
+					filePlugin.file_to_base64(result).done(function(result){						
+					     //onSuccess
+						dialogOn("資料上傳中...<span id='percent'>0.00%</span>",function(){
+							(function (data) {
+								setTimeout(function(){
+									 setTimeout(function(){
+										dialogOff();
+									 },1000);
+									 var o =new Object();
+									 o["PIC"]=data;
+									 o['my_id']=enPWD_string( getMeData("id"), window['PWD_CODE'] );
+									 o['lat'] = window['g']['me_lat'];
+									 o['lon'] = window['g']['me_lon'];								 
+									 var totals=0;
+									 totals+=strlen(o['PIC']);
+									 totals+=strlen(o['my_id']);
+									 totals+=strlen(o['lat'].toString());
+									 totals+=strlen(o['lon'].toString());
+									 //alert(totals);
+									 var URL = sprintf("%s?mode=uploadPic",window['webservice']);
+									 //alert(URL);
+									 //alert(print_r(o,true));
+									 //console.log(totals);		
+									 $.ajax({		
+										 xhr: function () {
+										        var xhr = $.ajaxSettings.xhr();
+										        xhr.upload.addEventListener("progress", function (evt) {									        	
+										            if (evt.lengthComputable) {
+										                var percentComplete = evt.loaded / evt.total;
+										                //console.log(percentComplete);
+										                $("#percent").html(Math.round(percentComplete * 100,2) + "%");
+										            }
+										        }, false);
+										        xhr.addEventListener("progress", function (evt) {
+										            if (evt.lengthComputable) {
+										                var percentComplete = evt.loaded / evt.total;
+										                //console.log(percentComplete);
+										                //alert(percentComplete);
+										                $("#percent").html(Math.round(percentComplete * 100,2) + "%");
+										            }
+										        }, false);
+										        return xhr;
+										    },									    
+										    xhrFields: {
+										    	withCredentials: true
+										    },
+										    type: "POST",
+											url:URL,
+											data:o,
+											async:true,											
+											dataType:"text",										
+											crossDomain:true,
+											success:function(result){				
+													if(result=="")
+													{
+														alert("Error...");
+														dialogOff();
+													}
+											    	var jdata = json_decode(result,true);
+											    	if(jdata['STATUS']=='OK')
+										    		{
+											    	  //alert("上傳成功...");
+											    		dialogOff();
+											    		smallComment("上傳成功...",true);
+											    		/*dialogOn("上傳成功...",function(){
+											    			setTimeout(function(){
+											    				dialogOff();
+											    			},3000);
+											    		});*/
+										    		}											    	
+												}
+											});
+								},500);
+							})(result);
+						 });
+					}); //file to base64 done
+				   }, function(){
+				     //onError
+					   dialogOff();
+				   }, 
+				   { 
+					   quality: 90,					   
+					   destinationType: Camera.DestinationType.FILE_URI,				       
+				       saveToPhotoAlbum:true
+				   });
+			},500);
+		});
 	});
 	//追蹤鈕
 	$("#gps_focus_on_off_btn").unbind("click");
@@ -397,12 +510,12 @@ function index_init(){
 	$("#form_now_place_s").unbind("click");
 	$("#form_now_place_s").click(function(){
 		//現在位置
-		$("#START").val(sprintf("%f,%f",window['g']['me_lat'],window['g']['me_lng']));
+		$("#START").val(sprintf("%f,%f",window['g']['me_lat'],window['g']['me_lon']));
 	});
 	$("#form_now_place_e").unbind("click");
 	$("#form_now_place_e").click(function(){
 		//現在位置
-		$("#END").val(sprintf("%f,%f",window['g']['me_lat'],window['g']['me_lng']));
+		$("#END").val(sprintf("%f,%f",window['g']['me_lat'],window['g']['me_lon']));
 	});
 	$("#CANCEL_BTN").unbind("click");
 	$("#CANCEL_BTN").click(function(){
@@ -473,32 +586,37 @@ function index_init(){
 			showFriendsLists();
 		}
 	});
+	//聊天室UI INIT
+	chat_room_INIT();
 }
 function loadLab(){
-	/*! LAB.js (LABjs :: Loading And Blocking JavaScript)
-    v2.0.3 (c) Kyle Simpson
-    MIT License
-	*/
-	(function(o){var K=o.$LAB,y="UseLocalXHR",z="AlwaysPreserveOrder",u="AllowDuplicates",A="CacheBust",B="BasePath",C=/^[^?#]*\//.exec(location.href)[0],D=/^\w+\:\/\/\/?[^\/]+/.exec(C)[0],i=document.head||document.getElementsByTagName("head"),L=(o.opera&&Object.prototype.toString.call(o.opera)=="[object Opera]")||("MozAppearance"in document.documentElement.style),q=document.createElement("script"),E=typeof q.preload=="boolean",r=E||(q.readyState&&q.readyState=="uninitialized"),F=!r&&q.async===true,M=!r&&!F&&!L;function G(a){return Object.prototype.toString.call(a)=="[object Function]"}function H(a){return Object.prototype.toString.call(a)=="[object Array]"}function N(a,c){var b=/^\w+\:\/\//;if(/^\/\/\/?/.test(a)){a=location.protocol+a}else if(!b.test(a)&&a.charAt(0)!="/"){a=(c||"")+a}return b.test(a)?a:((a.charAt(0)=="/"?D:C)+a)}function s(a,c){for(var b in a){if(a.hasOwnProperty(b)){c[b]=a[b]}}return c}function O(a){var c=false;for(var b=0;b<a.scripts.length;b++){if(a.scripts[b].ready&&a.scripts[b].exec_trigger){c=true;a.scripts[b].exec_trigger();a.scripts[b].exec_trigger=null}}return c}function t(a,c,b,d){a.onload=a.onreadystatechange=function(){if((a.readyState&&a.readyState!="complete"&&a.readyState!="loaded")||c[b])return;a.onload=a.onreadystatechange=null;d()}}function I(a){a.ready=a.finished=true;for(var c=0;c<a.finished_listeners.length;c++){a.finished_listeners[c]()}a.ready_listeners=[];a.finished_listeners=[]}function P(d,f,e,g,h){setTimeout(function(){var a,c=f.real_src,b;if("item"in i){if(!i[0]){setTimeout(arguments.callee,25);return}i=i[0]}a=document.createElement("script");if(f.type)a.type=f.type;if(f.charset)a.charset=f.charset;if(h){if(r){e.elem=a;if(E){a.preload=true;a.onpreload=g}else{a.onreadystatechange=function(){if(a.readyState=="loaded")g()}}a.src=c}else if(h&&c.indexOf(D)==0&&d[y]){b=new XMLHttpRequest();b.onreadystatechange=function(){if(b.readyState==4){b.onreadystatechange=function(){};e.text=b.responseText+"\n//@ sourceURL="+c;g()}};b.open("GET",c);b.send()}else{a.type="text/cache-script";t(a,e,"ready",function(){i.removeChild(a);g()});a.src=c;i.insertBefore(a,i.firstChild)}}else if(F){a.async=false;t(a,e,"finished",g);a.src=c;i.insertBefore(a,i.firstChild)}else{t(a,e,"finished",g);a.src=c;i.insertBefore(a,i.firstChild)}},0)}function J(){var l={},Q=r||M,n=[],p={},m;l[y]=true;l[z]=false;l[u]=false;l[A]=false;l[B]="";function R(a,c,b){var d;function f(){if(d!=null){d=null;I(b)}}if(p[c.src].finished)return;if(!a[u])p[c.src].finished=true;d=b.elem||document.createElement("script");if(c.type)d.type=c.type;if(c.charset)d.charset=c.charset;t(d,b,"finished",f);if(b.elem){b.elem=null}else if(b.text){d.onload=d.onreadystatechange=null;d.text=b.text}else{d.src=c.real_src}i.insertBefore(d,i.firstChild);if(b.text){f()}}function S(c,b,d,f){var e,g,h=function(){b.ready_cb(b,function(){R(c,b,e)})},j=function(){b.finished_cb(b,d)};b.src=N(b.src,c[B]);b.real_src=b.src+(c[A]?((/\?.*$/.test(b.src)?"&_":"?_")+~~(Math.random()*1E9)+"="):"");if(!p[b.src])p[b.src]={items:[],finished:false};g=p[b.src].items;if(c[u]||g.length==0){e=g[g.length]={ready:false,finished:false,ready_listeners:[h],finished_listeners:[j]};P(c,b,e,((f)?function(){e.ready=true;for(var a=0;a<e.ready_listeners.length;a++){e.ready_listeners[a]()}e.ready_listeners=[]}:function(){I(e)}),f)}else{e=g[0];if(e.finished){j()}else{e.finished_listeners.push(j)}}}function v(){var e,g=s(l,{}),h=[],j=0,w=false,k;function T(a,c){a.ready=true;a.exec_trigger=c;x()}function U(a,c){a.ready=a.finished=true;a.exec_trigger=null;for(var b=0;b<c.scripts.length;b++){if(!c.scripts[b].finished)return}c.finished=true;x()}function x(){while(j<h.length){if(G(h[j])){try{h[j++]()}catch(err){}continue}else if(!h[j].finished){if(O(h[j]))continue;break}j++}if(j==h.length){w=false;k=false}}function V(){if(!k||!k.scripts){h.push(k={scripts:[],finished:true})}}e={script:function(){for(var f=0;f<arguments.length;f++){(function(a,c){var b;if(!H(a)){c=[a]}for(var d=0;d<c.length;d++){V();a=c[d];if(G(a))a=a();if(!a)continue;if(H(a)){b=[].slice.call(a);b.unshift(d,1);[].splice.apply(c,b);d--;continue}if(typeof a=="string")a={src:a};a=s(a,{ready:false,ready_cb:T,finished:false,finished_cb:U});k.finished=false;k.scripts.push(a);S(g,a,k,(Q&&w));w=true;if(g[z])e.wait()}})(arguments[f],arguments[f])}return e},wait:function(){if(arguments.length>0){for(var a=0;a<arguments.length;a++){h.push(arguments[a])}k=h[h.length-1]}else k=false;x();return e}};return{script:e.script,wait:e.wait,setOptions:function(a){s(a,g);return e}}}m={setGlobalDefaults:function(a){s(a,l);return m},setOptions:function(){return v().setOptions.apply(null,arguments)},script:function(){return v().script.apply(null,arguments)},wait:function(){return v().wait.apply(null,arguments)},queueScript:function(){n[n.length]={type:"script",args:[].slice.call(arguments)};return m},queueWait:function(){n[n.length]={type:"wait",args:[].slice.call(arguments)};return m},runQueue:function(){var a=m,c=n.length,b=c,d;for(;--b>=0;){d=n.shift();a=a[d.type].apply(null,d.args)}return a},noConflict:function(){o.$LAB=K;return m},sandbox:function(){return J()}};return m}o.$LAB=J();(function(a,c,b){if(document.readyState==null&&document[a]){document.readyState="loading";document[a](c,b=function(){document.removeEventListener(c,b,false);document.readyState="complete"},false)}})("addEventListener","DOMContentLoaded")})(this);
-	
-	$LAB
-	.script("inc/javascript/jquery.tinyMap.js")
-	.wait(function(){
-		index_init();
-		
-		//非初次使用了??
-		if(getMemory("me_data")!=null)
-		{
-			if(window['me_data']['is_registered']=="YES")
-			{
-				//回報最後使用時間~
-				var URL=sprintf("%s?mode=updateLogin",window['webservice']);
-				var m = new Object();
-				m['id'] = enPWD_string( window['me_data']['id'], window['PWD_CODE'] );
-				myAjax_async(URL,m,function(result){					
-				});
-			}
-		}				
+	$.when(
+			$.getScript("inc/javascript/jquery.tinyMap.js"),
+			$.Deferred(function( deferred ){
+		        $( deferred.resolve );
+		    })
+	).done(function(){
+			index_init();
+			
+			//非初次使用了??
+			//alert(getMeData('is_registered'));
+			if(getMemory("me_data")!=null)
+			{		
+				if(getMeData('is_registered')=="YES")
+				{
+					//回報最後使用時間~
+					var URL=sprintf("%s?mode=updateLogin",window['webservice']);
+					var m = new Object();
+					m['id'] = enPWD_string( getMeData('id'), window['PWD_CODE'] );
+					myAjax_async(URL,m,function(result){					
+					});
+					
+					//使用 chat
+					$("#chat_room_div").show();
+					chat_init();
+					
+				}
+			}				
 	});
 }
 function init(){	
@@ -804,6 +922,9 @@ function onDeviceReady() {
 			</tr>
 		</table>				
 	</div>	
+</div>
+<!-- 聊天室 -->
+<div id="chat_room_div">
 </div>
 </body>
 </html>		

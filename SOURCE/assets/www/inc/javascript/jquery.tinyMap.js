@@ -1,3 +1,4 @@
+/*jshint undef:false, unused:false */
 /**
  * MIT License
  * Copyright(c) 2014 essoduke.org
@@ -17,15 +18,16 @@
  *
  * jQuery tinyMap 輕鬆建立 Google Maps 的 jQuery 擴充套件
  * 短小精幹！拯救你免於 Google Maps API 的摧殘，輕鬆建立 Google Maps 的 jQuery 擴充套件。
+ *
  * http://app.essoduke.org/tinyMap/
  *
  * @author: Essoduke Chang
- * @version: 2.5.8
+ * @version: 2.8.5
  *
  * [Changelog]
- * 修正呼叫 clear方法無法清除路線規劃圖層的問題。
+ * 路徑規劃新增 direction.autoViewport (bool 預設 true) 參數可設置是否要自動縮放該路線資訊。
  *
- * Last Modify: Tue, 1 April 2014 03:01:45 GMT
+ * Release 2014.08.06.184249
  */
 ;(function ($, window, document, undefined) {
 
@@ -33,14 +35,17 @@
 
     // Loop counter for geocoder
     var pluginName = 'tinyMap',
-        g = {},
         loop = 0,
     // Plugin default settings
         defaults = {
-            'center': {x: '24', y: '121'},
+            'id':{},
+            'load':function(){},
+            'center': {x: '', y: ''},
             'control': true,
+            'disableDoubleClickZoom': false, //2.6.4
             'disableDefaultUI': false, //2.5.1
             'draggable': true,
+            'infoWindowAutoClose':  true, //2.8.4
             'keyboardShortcuts': true,
             'mapTypeControl': true,
             'mapTypeControlOptions': {
@@ -50,13 +55,14 @@
             'mapTypeId': 'ROADMAP',
             'marker': [],
             'markerFitBounds': false,
+            'markerCluster': false, //2.6.0
             'maxZoom': null, //2.5.1
             'minZoom': null, //2.5.1
             'panControl': true, //2.5.1
             'panControlOptions': {
                 'position': 'LEFT_TOP'
             },
-            'polyline': [],
+            'polyline': [], // 2.8.0 update
             'navigationControl': true,
             'navigationControlOptions': {
                 'position': 'TOP_LEFT',
@@ -79,14 +85,19 @@
                 'position': 'LEFT_TOP'
             },
             'notfound': '找不到查詢的地點',
-            'loading': '讀取中…',
+            'loading': '讀取中&hellip;',
             'kml': {
                 'url': '',
                 'viewport': true,
                 'infowindow': false
             },
-            'interval': 200 //2.5.0
-        };
+            'interval': 200, //2.5.0
+            'event': null, //2.7.0
+            'showStreetView': false, // 2.7.5
+            'autoLocation': false //2.8.2
+        },
+        _directMarkersLength = 0,
+        _geoMarkersLength = 0;
 
     /**
      * _hasOwnProperty for compatibility IE
@@ -97,10 +108,13 @@
      */
     function _hasOwnProperty (obj, property) {
         try {
-            return (!window.hasOwnProperty) ? Object.prototype.hasOwnProperty.call(obj, property.toString()) : obj.hasOwnProperty(property.toString());
+            return (!window.hasOwnProperty) ?
+                   Object.prototype.hasOwnProperty.call(obj, property.toString()) :
+                   obj.hasOwnProperty(property.toString());
         } catch (ignore) {
         }
     }
+    //#!#START LABEL
     /**
      * Label in Maps
      * @param {Object} options Label options
@@ -109,8 +123,16 @@
     function Label (options) {
         var css = (options.css || '');
         this.setValues(options);
-        this.span = $('<span/>').css({'position': 'relative', 'left': '-50%', 'top': '0', 'white-space': 'nowrap'}).addClass(css);
-        this.div = $('<div/>').css({'position': 'absolute', 'display': 'none'});
+        this.span = $('<span/>').css({
+            'position': 'relative',
+            'left': '-50%',
+            'top': '0',
+            'white-space': 'nowrap'
+        }).addClass(css);
+        this.div = $('<div/>').css({
+            'position': 'absolute',
+            'display': 'none'
+        });
         this.span.appendTo(this.div);
     }
     /**
@@ -123,10 +145,11 @@
      * @this {Label}
      */
     Label.prototype.onAdd = function () {
-        var pane = this.getPanes().overlayLayer, me = this;
-        this.div.appendTo($(pane));
-        this.listeners = [
-            google.maps.event.addListener(this, 'visible_changed', me.onRemove)
+        var self = this,
+            pane = self.getPanes().overlayLayer;
+        self.div.appendTo($(pane));
+        self.listeners = [
+            google.maps.event.addListener(self, 'visible_changed', self.onRemove)
         ];
     };
     /**
@@ -135,10 +158,19 @@
      */
     Label.prototype.draw = function () {
         var projection = this.getProjection(),
+            position   = {};
+
+        try {
             position = projection.fromLatLngToDivPixel(this.get('position'));
-        this.div.css({'left': position.x + 'px', 'top': position.y + 'px', 'display': 'block'});
-        if (this.text) {
-            this.span.html(this.text.toString());
+            this.div.css({
+                'left': position.x + 'px',
+                'top': position.y + 'px',
+                'display': 'block'
+            });
+            if (this.text) {
+                this.span.html(this.text.toString());
+            }
+        } catch (ignore) {
         }
     };
     /**
@@ -148,6 +180,7 @@
     Label.prototype.onRemove = function () {
         $(this.div).remove();
     };
+    //#!#END
 
     /**
      * tinyMap Constructor
@@ -155,7 +188,7 @@
      * @param {(Object|string)} options User settings
      * @constructor
      */
-    function tinyMap (container, options) {
+    function TinyMap (container, options) {
         // Make sure the API has loaded.
         if (!_hasOwnProperty(window, 'google')) {
             return;
@@ -165,6 +198,21 @@
          * @type {Object}
          */
         this.map = null;
+        /**
+         * Map marker cluster
+         * @type {Object}
+         */
+        this.markerCluster = null;
+        /**
+         * Map markers
+         * @type {Object}
+         */
+        this._markers = [];
+        /**
+         * Map Labels
+         * @type {Object}
+         */
+        this._labels = [];
         /**
          * DOM of selector
          * @type {Object}
@@ -183,69 +231,82 @@
         /**
          * Google Maps options
          * @type {Object}
+         */
+        /**
+         * Google Maps options
+         * @type {Object}
          * http://stackoverflow.com/questions/7396722/hide-local-listings-from-google-maps-api
          * by John
          * 關掉畫面的飯店學校啊... 加 styles
          * attraction", "business", "government", "medical", "park", "place_of_worship", "school", "sports_complex"];
-         */
+         */         
         this.GoogleMapOptions = {
             'center': new google.maps.LatLng(this.options.center.x, this.options.center.y),
             'control': this.options.control,
+            'disableDoubleClickZoom': this.options.disableDoubleClickZoom,
             'disableDefaultUI': this.options.disableDefaultUI,
             'draggable': this.options.draggable,
-            'keyboardShortcuts': this.options.keyboardShortcuts,            
-            'mapTypeId': google.maps.MapTypeId[this.options.mapTypeId.toUpperCase()],            
-            'styles':[ //john 改
-					  { 
-					    featureType: "poi.attraction",
-					    stylers: [
-					      { visibility: "off" }
-					    ]   
-					  },
-					  { 
-						    featureType: "poi.business",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					   { 
-						    featureType: "poi.government",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					   { 
-						    featureType: "poi.medical",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					   { 
-						    featureType: "poi.park",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					   { 
-						    featureType: "poi.place_of_worship",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					   { 
-						    featureType: "poi.school",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					   { 
-						    featureType: "poi.sports_complex",
-						    stylers: [
-						      { visibility: "off" }
-						    ]   
-					   },
-					],
-            'mapTypeControl': this.options.mapTypeControl,
+            'keyboardShortcuts': this.options.keyboardShortcuts,
+            'mapTypeId': google.maps.MapTypeId[this.options.mapTypeId.toUpperCase()],                    
+            'styles':[ //john 改                
+                	{ 
+                	    featureType: "landscape.man_made",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "landscape.natural",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "landscape.natural.landcover",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "landscape.natural.terrain",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.attraction",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.business",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.government",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.medical",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.park",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.place_of_worship",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.school",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "poi.sports_complex",	
+                	    stylers: [{ visibility: "off" }]
+                  },
+                	{ 
+                	    featureType: "transit",	
+                	    stylers: [{ visibility: "off" }]
+                  }
+					  ],
+            'mapTypeControl': this.options.mapTypeControl,    
             'mapTypeControlOptions': {
                 'position': google.maps.ControlPosition[this.options.mapTypeControlOptions.position],
                 'style': google.maps.MapTypeControlStyle[this.options.mapTypeControlOptions.style.toUpperCase()]
@@ -279,19 +340,27 @@
                 'style': google.maps.ZoomControlStyle[this.options.zoomControlOptions.style.toUpperCase()]
             }
         };
+        if (true === this.options.disableDefaultUI) {
+            this.GoogleMapOptions.mapTypeControl = false;
+            this.GoogleMapOptions.navigationControl = false;
+            this.GoogleMapOptions.panControl = false;
+            this.GoogleMapOptions.rotateControl = false;
+            this.GoogleMapOptions.scaleControl = false;
+            this.GoogleMapOptions.streetViewControl = false;
+            this.GoogleMapOptions.zoomControl = false;
+        }
+
         $(this.container).html(this.options.loading);
         this.init();
     }
     /**
      * tinyMap prototype
      */
-    tinyMap.prototype = {
+    TinyMap.prototype = {
 
-        VERSION: '2.5.8',
+        VERSION: '2.8.5',
 
         // Layers container
-        _markers: [],
-        _labels: [],
         _polylines: [],
         _polygons: [],
         _circles: [],
@@ -310,82 +379,176 @@
                 map.setZoom(opt.zoom);
             }
         },
+        //#!#START KML
         /**
          * KML overlay
          * @param {Object} map Map instance
          * @param {Object} opt KML options
          */
         kml: function (map, opt) {
-            var opt = (!opt ? this.options : opt),
-                kml_opt = {},
+            var kml_opt = {},
                 kml_url = '',
                 kml = {};
+            opt = (!opt ? this.options : opt);
             if (undefined !== opt.kml) {
                 kml_opt = {
                     preserveViewport: true,
                     suppressInfoWindows: false
-                },
-                kml_url = ('string' === typeof opt.kml && 0 !== opt.kml.length) ? opt.kml : (undefined !== opt.kml.url ? opt.kml.url : ''),
+                };
+                kml_url = ('string' === typeof opt.kml && 0 !== opt.kml.length) ?
+                          opt.kml :
+                          (undefined !== opt.kml.url ? opt.kml.url : '');
                 kml = new google.maps.KmlLayer(kml_url, $.extend(kml_opt, opt.kml));
                 this._kmls.push(kml);
                 kml.setMap(map);
             }
         },
+        //#!#END
+        //#!#START DIRECTION
         /**
          * Direction overlay
          * @param {Object} map Map instance
          * @param {Object} opt Direction options
          */
         direction: function (map, opt) {
-            var d = '',
-                opt = !opt ? this.options : opt;
+            var d = '';
+            opt = !opt ? this.options : opt;
             if (undefined !== opt.direction && 0 < opt.direction.length) {
                 for (d in opt.direction) {
                     if (_hasOwnProperty(opt.direction, d)) {
                         if (undefined !== opt.direction[d]) {
-                            this.DirectionService(opt.direction[d]);
+                            this.directionService(opt.direction[d]);
                         }
                     }
                 }
             }
         },
+        //#!#END
+        //#!#START MARKER
         /**
          * Markers overlay
          * @param {Object} map Map instance
          * @param {Object} opt Markers options
          */
-        markers: function (map, opt) {
+        markers: function (map, opt, source) {
             var m = '',
-                opt = !opt ? this.options : opt;
-            if (undefined !== opt.marker) {
-                if (0 < opt.marker.length) {
-                    for (m in opt.marker) {
-                        if (_hasOwnProperty(opt.marker, m)) {
-                            if (_hasOwnProperty(opt.marker[m], 'addr')) {
-                                if ('object' === typeof opt.marker[m].addr) {
-                                    if (2 === opt.marker[m].addr.length) {
-                                        this.MarkerDirect(opt.marker[m]);
-                                    }
-                                } else {
-                                    this.MarkerByGeocoder(opt.marker[m]);
+                i = 0,
+                j = 0,
+                markers = [],
+                labels  = [];
+
+            opt = !opt ? this.options : opt;
+
+            _directMarkersLength = 0;
+            _geoMarkersLength = 0;
+
+            markers = this._markers;
+
+            // For first initialize of instance.
+            if (!source || 0 === markers.length) {
+                if (undefined !== opt.marker) {
+                    if (0 < opt.marker.length) {
+                        for (m in opt.marker) {
+                            if (_hasOwnProperty(opt.marker, m) &&
+                                _hasOwnProperty(opt.marker[m], 'addr')
+                            ) {
+                                if (
+                                    'object' === typeof opt.marker[m].addr &&
+                                    2 === opt.marker[m].addr.length
+                                ) {
+                                    this.markerDirect(map, opt.marker[m], opt);
+                                } else if ('string' === typeof opt.marker[m].addr) {
+                                    this.markerByGeocoder(map, opt.marker[m], opt);
                                 }
                             }
+                        }
+                        /*
+                        if (true === opt.markerFitBounds) {
+                            map.fitBounds(this.bounds);
+                        }*/
+                    }
+                }
+            }
+
+            /**
+             * Put existed markers to the new position
+             */
+            if ('modify' === source) {
+
+                labels  = this._labels;
+
+                for (i = 0; i < opt.marker.length; i += 1) {
+                    if (undefined !== opt.marker[i].id) {
+                        for (j = 0; j < markers.length; j += 1) {
+                            if (opt.marker[i].id === markers[j].id &&
+                                undefined !== opt.marker[i].addr
+                            ) {
+                                markers[j].setPosition(
+                                    new google.maps.LatLng(
+                                        opt.marker[i].addr[0],
+                                        opt.marker[i].addr[1]
+                                    )
+                                );
+                                if ('function' === typeof markers[i].infoWindow.setContent) {
+                                    markers[j].infoWindow.setContent(opt.marker[i].text);
+                                }
+                                continue;
+                            }
+                        }
+                        for (j = 0; j < labels.length; j += 1) {
+                            if (opt.marker[i].id === labels[j].id) {
+                                if (_hasOwnProperty(opt.marker[i], 'label')) {
+                                    labels[j].text = opt.marker[i].label;
+                                }
+                                labels[j].draw();
+                                continue;
+                            }
+                        }
+                    // Insert the new marker if it is not existed.
+                    } else {
+                        if (
+                            'object' === typeof opt.marker[i].addr &&
+                            2 === opt.marker[i].addr.length
+                        ) {
+                            this.markerDirect(map, opt.marker[i]);
+                        } else if ('string' === typeof opt.marker[i].addr) {
+                            this.markerByGeocoder(map, opt.marker[i]);
                         }
                     }
                 }
             }
+
+            /**
+             * Apply marker cluster.
+             * Require markerclusterer.js
+             * @see {@link http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/}
+             */
+            if (_hasOwnProperty(opt, 'markerCluster') && true === opt.markerCluster) {
+                if ('function' === typeof MarkerClusterer) {
+                    return new MarkerClusterer(map, this._markers);
+                }
+            }
         },
+        //#!#END
+        //#!#START POLYLINE
         /**
          * Polyline overlay
          * @param {Object} map Map instance
          * @param {Object} opt Polyline options
          */
-        DrawPolyline: function (map, opt) {
+        drawPolyline: function (map, opt) {
             var polyline = {},
+                i = 0,
                 p = '',
                 c = {},
-                coords = [],
-                opt = !opt ? this.options : opt;
+                len = 0,
+                coords = new google.maps.MVCArray(),
+                path   = [],
+                service = {},
+                waypoints = [],
+                distance = {};
+
+            opt = !opt ? this.options : opt;
             if (undefined !== opt.polyline) {
                 if (undefined !== opt.polyline.coords) {
                     for (p in opt.polyline.coords) {
@@ -396,29 +559,73 @@
                             }
                         }
                     }
+
                     polyline = new google.maps.Polyline({
-                        'path': coords,
-                        'geodesic': true, //By John
                         'strokeColor': opt.polyline.color || '#FF0000',
                         'strokeOpacity': 1.0,
                         'strokeWeight': opt.polyline.width || 2
                     });
+
                     this._polylines.push(polyline);
+
+                    if (2 < coords.getLength()) {
+                        coords.forEach(function (loc, index) {
+                            if (0 < index && (coords.getLength() - 1 > index)) {
+                                waypoints.push({
+                                    'location': loc,
+                                    'stopover': false
+                                });
+                            }
+                        });
+                    }
+
+                    if (true === opt.polyline.snap) {
+                        service = new google.maps.DirectionsService();
+                        service.route({
+                            'origin': coords.getAt(0),
+                            'waypoints': waypoints,
+                            'destination': coords.getAt(coords.getLength() - 1),
+                            'travelMode': google.maps.DirectionsTravelMode.DRIVING
+                        }, function (result, status) {
+                            if (status === google.maps.DirectionsStatus.OK) {
+                                for (i = 0, len = result.routes[0].overview_path.length; i < len; i += 1) {
+                                    path.push(result.routes[0].overview_path[i]);
+                                }
+                                polyline.setPath(path);
+                                if ('function' === typeof opt.polyline.getDistance) {
+                                    distance = result.routes[0].legs[0].distance;
+                                    opt.polyline.getDistance.call(this, distance);
+                                }
+                            }
+                        });
+                    } else {
+                        polyline.setPath(coords);
+                        if (_hasOwnProperty(google.maps.geometry, 'spherical')) {
+                            if ('function' === typeof google.maps.geometry.spherical.computeDistanceBetween) {
+                                distance = google.maps.geometry.spherical.computeDistanceBetween(coords.getAt(0), coords.getAt(coords.getLength() - 1));
+                                if ('function' === typeof opt.polyline.getDistance) {
+                                    opt.polyline.getDistance.call(this, distance);
+                                }
+                            }
+                        }
+                    }
                     polyline.setMap(map);
                 }
             }
         },
+        //#!#END
+        //#!#START POLYGON
         /**
          * Polygon overlay
          * @param {Object} map Map instance
          * @param {Object} opt Polygon options
          */
-        DrawPolygon: function (map, opt) {
+        drawPolygon: function (map, opt) {
             var polygon = {},
                 p = '',
                 c = {},
-                coords = [],
-                opt = !opt ? this.options : opt;
+                coords = [];
+            opt = !opt ? this.options : opt;
             if (undefined !== opt.polygon) {
                 if (undefined !== opt.polygon.coords) {
                     for (p in opt.polygon.coords) {
@@ -445,16 +652,18 @@
                 }
             }
         },
+        //#!#END
+        //#!#START CIRCLE
         /**
          * Circle overlay
          * @param {Object} map Map instance
          * @param {Object} opt Circle options
          */
-        DrawCircle: function (map, opt) {
+        drawCircle: function (map, opt) {
             var c = 0,
                 circle = {},
-                circles = {},
-                opt = !opt ? this.options : opt;
+                circles = {};
+            opt = !opt ? this.options : opt;
             if (undefined !== opt.circle && 0 < opt.circle.length) {
                 for (c = opt.circle.length - 1; c >= 0; c -= 1) {
                     circle = opt.circle[c];
@@ -468,7 +677,8 @@
                             'map': this.map,
                             'center': new google.maps.LatLng(circle.center.x, circle.center.y),
                             'radius': circle.radius || 10,
-                            'zIndex': 100
+                            'zIndex': 100,
+                            'id' : _hasOwnProperty(opt, 'id') ? opt.id : ''
                         });
                         this._circles.push(circles);
                         if ($.isFunction(opt.circle[c].click)) {
@@ -478,143 +688,290 @@
                 }
             }
         },
+        //#!#END
         /**
          * Overlay process
          * @this {tinyMap}
          */
         overlay: function () {
-            // kml overlay
-            this.kml(this.map);
-            // direction overlay
-            this.direction(this.map);
-            // markers overlay
-            this.markers(this.map);
-            // polyline overlay
-            this.DrawPolyline(this.map);
-            // polygon overlay
-            this.DrawPolygon(this.map);
-            // circle overlay
-            this.DrawCircle(this.map);
+            var map = this.map,
+                opt = this.options;
+            try {
+                //#!#START KML
+                // kml overlay
+                this.kml(map, opt);
+                //#!#END
+                //#!#START DIRECTION
+                // direction overlay
+                this.direction(map, opt);
+                //#!#END
+                //#!#START MARKER
+                // markers overlay
+                this.markers(map, opt);
+                //#!#END
+                //#!#START POLYLINE
+                // polyline overlay
+                this.drawPolyline(map, opt);
+                //#!#END
+                //#!#START POLYGON
+                // polygon overlay
+                this.drawPolygon(map, opt);
+                //#!#END
+                //#!#START CIRCLE
+                // circle overlay
+                this.drawCircle(map, opt);
+                //#!#END
+                // StreetView service
+                this.streetView(map, opt);
+                // GeoLocation
+                this.geoLocation(map, opt);
+            } catch (ignore) {
+                console.dir(ignore);
+            }
         },
+        //#!#START MARKER
+        /**
+         * Build the icon options of marker
+         * @param {Object} opt Marker option
+         * @this {tinyMap}
+         */
+        markerIcon: function (opt) {
+            var icons = {};
+            if (_hasOwnProperty(opt, 'icon')) {
+
+                if ('string' === typeof opt.icon) {
+                    return opt.icon;
+                }
+                if (_hasOwnProperty(opt.icon, 'url')) {
+                    icons.url = opt.icon.url;
+                }
+                if (_hasOwnProperty(opt.icon, 'size')) {
+                    if (undefined !== opt.icon.size[0] &&
+                        undefined !== opt.icon.size[1]
+                    ) {
+                        icons.scaledSize = new google.maps.Size(
+                            opt.icon.size[0],
+                            opt.icon.size[1]
+                        );
+                    }
+                }
+                if (_hasOwnProperty(opt.icon, 'anchor')) {
+                    if (undefined !== opt.icon.anchor[0] &&
+                        undefined !== opt.icon.anchor[1]
+                    ) {
+                        icons.anchor = new google.maps.Point(
+                            opt.icon.anchor[0],
+                            opt.icon.anchor[1]
+                        );
+                    }
+                }
+            }
+            return icons;
+        },
+
         /**
          * Set a marker directly by latitude and longitude
          * @param {Object} opt Options
          * @this {tinyMap}
          */
-        MarkerDirect: function (opt) {
-            var self = this,
-                marker, label_opt, label,
+        markerDirect: function (map, opt) {
+            var self     = this,
+                marker   = {},
+                labelOpt = {},
+                label    = {},
+                id       = _hasOwnProperty(opt, 'id') ? opt.id : '',
+                title    = _hasOwnProperty(opt, 'title') ?
+                           opt.title.toString().replace(/<([^>]+)>/g, '') :
+                           '',
+                content  = _hasOwnProperty(opt, 'text') ? opt.text.toString() : '',
+
                 markerOptions = {
-                    'map': this.map,
+                    'map': map,
                     'position': new google.maps.LatLng(opt.addr[0], opt.addr[1]),
-                    'title': opt.text.replace(/<([^>]+)>/g, ''),
-                    'infoWindow': new google.maps.InfoWindow({content: opt.text})
+                    'infoWindow': new google.maps.InfoWindow({
+                        'content': content
+                    }),
+                    'animation': null,
+                    'id': id
                 },
-                icon = {},
-                anchor = {};
-            if ('string' === typeof opt.icon) {
-                markerOptions.icon = opt.icon;
-            } else {
-                // 若 opt.icon.url 存在
-                if (_hasOwnProperty(opt.icon, 'url')) {
-                    // 確保 opt.icon.anchor 存在且 array 數組
-                    anchor  = (_hasOwnProperty(opt.icon, 'anchor') && undefined !== opt.icon.anchor[1]) ?
-                              new google.maps.Point(opt.icon.anchor[0], opt.icon.anchor[1]) :
-                              new google.maps.Point(0, 0);
-                            
-                    icon = new google.maps.MarkerImage(opt.icon.url, null, new google.maps.Point(0,0), anchor);
-                    markerOptions.icon = icon;
+                icons = self.markerIcon(opt);
+
+            if (title) {
+                markerOptions.title = title;
+            }
+
+            if ('string' === typeof icons || _hasOwnProperty(icons, 'url')) {
+                markerOptions.icon = icons;
+            }
+
+            if (_hasOwnProperty(opt.animation)) {
+                if ('string' === typeof opt.animation) {
+                    markerOptions.animation = google.maps.Animation[opt.animation.toUpperCase()];
                 }
             }
 
             marker = new google.maps.Marker(markerOptions);
-            this._markers.push(marker);
+            self._markers.push(marker);
 
-            // autozoom
+            // Apply marker fitbounds
             if (_hasOwnProperty(marker, 'position')) {
                 if (marker.getPosition().lat() && marker.getPosition().lng()) {
-                    self.bounds.extend(markerOptions.position);
+                    self.bounds.extend(marker.position);
+                }
+                if (true === self.options.markerFitBounds) {
+                    // Make sure fitBounds call after the last marker created.
+                    if (self._markers.length === self.options.marker.length) {
+                        map.fitBounds(self.bounds);
+                    }
                 }
             }
 
-            label_opt = {
-                map: this.map,
-                css: undefined !== opt.css ? opt.css : ''
-            };
-            if ('string' === typeof opt.label && 0 !== opt.label.length) {
-                label_opt.text = opt.label;
+            /**
+             * Apply marker cluster.
+             * Require markerclusterer.js
+             * @see {@link http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/}
+             */
+            if (true === self.options.markerCluster) {
+                if ('function' === typeof MarkerClusterer) {
+                    if (_directMarkersLength === self.options.marker.length) {
+                        self.markerCluster = new MarkerClusterer(map, self._markers);
+                        return;
+                    }
+                }
             }
-            label = new Label(label_opt);
-            label.bindTo('position', marker, 'position');
-            label.bindTo('text', marker, 'position');
-            label.bindTo('visible', marker);
 
-            self.bindEvent(marker, opt.event);
+            labelOpt = {
+                map: map,
+                css: undefined !== opt.css ? opt.css : '',
+                id:  id
+            };
+
+            if ('string' === typeof opt.label && 0 !== opt.label.length) {
+                labelOpt.text = opt.label;
+                label = new Label(labelOpt);
+                label.bindTo('position', marker, 'position');
+                label.bindTo('text', marker, 'position');
+                label.bindTo('visible', marker);
+                this._labels.push(label);
+            }
+            self.bindEvents(marker, opt.event);
         },
         /**
          * Set a marker by Geocoder service
          * @param {Object} opt Options
          * @this {tinyMap}
          */
-        MarkerByGeocoder: function (opt) {
+        markerByGeocoder: function (map, opt) {
             var geocoder = new google.maps.Geocoder(),
                 self = this;
+
             if (-1 !== opt.addr.indexOf(',')) {
 				opt.addr = 'loc: ' + opt.addr;
 			}
+
             geocoder.geocode({'address': opt.addr}, function (results, status) {
                 // If exceeded, call it later;
                 if (status === google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
                     window.setTimeout(function () {
-                        self.MarkerByGeocoder(opt);
+                        self.markerByGeocoder(opt);
                     }, self.interval);
                 } else if (status === google.maps.GeocoderStatus.OK) {
-                    var marker, label_opt, label,
+                    var marker = {},
+                        labelOpt = {},
+                        label = {},
+                        id    = _hasOwnProperty(opt, 'id') ? opt.id : '',
+                        title = _hasOwnProperty(opt, 'title') ?
+                                opt.title.toString().replace(/<([^>]+)>/g, '') :
+                                '',
+                        content = _hasOwnProperty(opt, 'text') ? opt.text.toString() : '',
                         markerOptions = {
-                            'map': self.map,
+                            'map': map,
                             'position': results[0].geometry.location,
-                            'title': opt.text.replace(/<([^>]+)>/g, ''),
-                            'infoWindow': new google.maps.InfoWindow({content: opt.text})
-                        };
-                    if ('string' === typeof opt.icon) {
-                        markerOptions.icon = opt.icon;
+                            'title': title,
+                            'infoWindow': new google.maps.InfoWindow({
+                                'content': content
+                            }),
+                            'animation': null,
+                            'id': id
+                        },
+                        icons = self.markerIcon(opt);
+
+                    if (title) {
+                        markerOptions.title = title;
                     }
+
+                    if ('string' === typeof icons || _hasOwnProperty(icons, 'url')) {
+                        markerOptions.icon = icons;
+                    }
+
+                    if (_hasOwnProperty(opt, 'animation')) {
+                        if ('string' === typeof opt.animation) {
+                            markerOptions.animation = google.maps.Animation[opt.animation.toUpperCase()];
+                        }
+                    }
+
                     marker = new google.maps.Marker(markerOptions);
                     self._markers.push(marker);
-                    // autozoom
+
+                    // Apply marker fitbounds
                     if (_hasOwnProperty(marker, 'position')) {
                         if (marker.getPosition().lat() && marker.getPosition().lng()) {
                             self.bounds.extend(markerOptions.position);
                         }
                     }
-                    label_opt = {
+                    if (true === self.options.markerFitBounds) {
+                        // Make sure fitBounds call after the last marker created.
+                        if (self._markers.length === self.options.marker.length) {
+                            map.fitBounds(self.bounds);
+                        }
+                    }
+                    /**
+                     * Apply marker cluster.
+                     * Require markerclusterer.js
+                     * @see {@link http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/}
+                     */
+                    if (_hasOwnProperty(self.options, 'markerCluster')) {
+                        if ('function' === typeof MarkerClusterer) {
+                            if (_geoMarkersLength === self.options.marker.length) {
+                                self.markerCluster = new MarkerClusterer(map, self._markers);
+                                return;
+                            }
+                        }
+                    }
+
+                    labelOpt = {
                         map: self.map,
                         css: opt.css || ''
                     };
                     if ('string' === typeof opt.label && 0 !== opt.label.length) {
-                        label_opt.text = opt.label;
+                        labelOpt.text = opt.label;
+                        label = new Label(labelOpt);
+                        label.bindTo('position', marker, 'position');
+                        label.bindTo('text', marker, 'position');
+                        label.bindTo('visible', marker);
+                        self._labels.push(label);
                     }
-                    label = new Label(label_opt);
-                    label.bindTo('position', marker, 'position');
-                    label.bindTo('text', marker, 'position');
-                    label.bindTo('visible', marker);
-                    self.bindEvent(marker, opt.event);
+                    self.bindEvents(marker, opt.event);
                 }
             });
         },
+        //#!#END
+        //#!#START DIRECTION
         /**
          * Direction service
          * @param {Object} opt Options
          * @this {tinyMap}
          */
-        DirectionService: function (opt) {
-            var waypoints = [],
+        directionService: function (opt) {
+            var self = this,
+                waypoints = [],
                 directionsService = new google.maps.DirectionsService(),
                 directionsDisplay = new google.maps.DirectionsRenderer(),
                 request = {
                     'travelMode': google.maps.DirectionsTravelMode.DRIVING,
                     'optimizeWaypoints': opt.optimize || false
                 },
+                panel = {},
                 i = 0,
                 c = 0;
             if ('string' === typeof opt.from) {
@@ -624,10 +981,12 @@
                 request.destination = opt.to;
             }
             if ('string' === typeof opt.travel) {
-                if (0 < opt.travel.length) {
-                    request.travelMode = google.maps.DirectionsTravelMode[opt.travel.toUpperCase()];
+                if (opt.travel.length) {
+                    request.travelMode = google.maps.TravelMode[opt.travel.toUpperCase()];
                 }
             }
+            panel = $(undefined !== opt.panel ? opt.panel : null);
+
             if (undefined !== opt.waypoint && 0 !== opt.waypoint) {
                 for (i = 0, c = opt.waypoint.length; i < c; i += 1) {
                     waypoints.push({
@@ -640,35 +999,243 @@
             if (undefined !== request.origin && undefined !== request.destination) {
                 directionsService.route(request, function (response, status) {
                     if (status === google.maps.DirectionsStatus.OK) {
+                        console.dir(opt.autoViewport);
+                        if (undefined !== opt.autoViewport) {
+                            directionsDisplay.setOptions({
+                                'preserveViewport': false === opt.autoViewport ? true : false
+                            });
+                        }
                         directionsDisplay.setDirections(response);
                     }
                 });
-                directionsDisplay.setMap(this.map);
-                this._directions.push(directionsDisplay);
+                directionsDisplay.setMap(self.map);
+                if (panel.length) {
+                    directionsDisplay.setPanel(panel.get(0));
+                }
+                self._directions.push(directionsDisplay);
             }
         },
+        //#!#END
         /**
-         * bind event of markers
+         * bind events
          * @param {Object} marker Marker objects
-         * @param {string|Object} event Events
+         * @param {function|Object} event Events
+         * @this {tinyMap}
          */
-        bindEvent: function (marker, event) {
-            var self = this;
-            if ('function' === typeof event) {
-                google.maps.event.addListener(marker, 'click', event);
-            } else if (_hasOwnProperty(event, 'type')) {
-                if (
-                    'string' === typeof event.type &&
-                    'function' === typeof event.bind
-                ) {
-                    google.maps.event.addListener(marker, event.type, event.bind);
+        bindEvents: function (target, event) {
+
+            var self = this,
+                e = {};
+
+            switch (typeof event) {
+            case 'function':
+                google.maps.event.addListener(target, 'click', event);
+                break;
+            case 'object':
+                for (e in event) {
+                    if ('function' === typeof event[e]) {
+                        google.maps.event.addListener(target, e, event[e]);
+                    } else {
+                        if (_hasOwnProperty(event[e], 'func') && 'function' === typeof event[e].func) {
+                            if (_hasOwnProperty(event[e], 'once') && true === event[e].once) {
+                                google.maps.event.addListenerOnce(target, e, event[e].func);
+                            } else {
+                                google.maps.event.addListener(target, e, event[e].func);
+                            }
+                        } else if ('function' === typeof event[e]) {
+                            google.maps.event.addListener(target, e, event[e]);
+                        }
+                    }
                 }
-            } else {
-                google.maps.event.addListener(marker, 'click', function () {
-                    marker.infoWindow.open(self.map, marker);
+            }
+            if (_hasOwnProperty(target, 'infoWindow')) {
+                google.maps.event.addListener(target, 'click', function () {
+                    var i = 0,
+                        m = {};
+                    // Close all infoWindows if `infoWindowAutoClose` was true.
+                    if (true === self.options.infoWindowAutoClose) {
+                        for (i = 0; i < self._markers.length; i += 1) {
+                            m = self._markers[i];
+                            if (undefined !== m.infoWindow) {
+                                if ('function' === typeof m.infoWindow.close) {
+                                    m.infoWindow.close();
+                                }
+                            }
+                        }
+                    }
+                    target.infoWindow.open(self.map, target);
                 });
             }
         },
+        /**
+         * Switch StreetView
+         * @this {tinyMap}
+         */
+        streetView: function (map, opt) {
+            var pano = map.getStreetView();
+            pano.setPosition(map.getCenter());
+            if (_hasOwnProperty(opt, 'showStreetView')) {
+                pano.setVisible(opt.showStreetView);
+            }
+        },
+        //#!#START PANTO
+        /**
+         * Method: Google Maps PanTo
+         * @param {string} addr Text address or "latitude, longitude" format
+         * @public
+         */
+        panto: function (addr) {
+            var self = this,
+                latlng = '',
+                geocoder = {},
+                m = self.map;
+            if (_hasOwnProperty(self, 'map')) {
+                if (null !== m && undefined !== m) {
+                    if ('string' === typeof addr) {
+                        if (-1 !== addr.indexOf(',')) {
+                            latlng = 'loc: ' + addr;
+                        }
+                        geocoder = new google.maps.Geocoder();
+                        geocoder.geocode({'address': addr}, function (results, status) {
+                            if (status === google.maps.GeocoderStatus.OK) {
+                                if ($.isFunction(m.panTo) && undefined !== results[0]) {
+                                    m.panTo(results[0].geometry.location);
+                                }
+                            }
+                        });
+                        return;
+                    } else {
+                        if ('[object Array]' === Object.prototype.toString.call(addr)) {
+                            if (2 === addr.length) {
+                                latlng = new google.maps.LatLng(addr[0], addr[1]);
+                            }
+                        } else if (_hasOwnProperty(addr, 'lat') && _hasOwnProperty(addr, 'lng')) {
+                            latlng = new google.maps.LatLng(addr.lat, addr.lng);
+                        } else if (_hasOwnProperty(addr, 'x') && _hasOwnProperty(addr, 'y')) {
+                            latlng = new google.maps.LatLng(addr.x, addr.y);
+                        }
+                        if ($.isFunction(m.panTo) && undefined !== latlng) {
+                            m.panTo(latlng);
+                        }
+                    }
+                }
+            }
+        },
+        //#!#END
+        //#!#START CLEAR
+        /**
+         * Method: Google Maps clear the specificed layer
+         * @param {string} type Layer type (markers, polylines, polygons, circles, kmls, directions)
+         * @public
+         */
+        clear: function (layer) {
+            var self = this,
+                layers = [],
+                label = '',
+                i = 0,
+                j = 0;
+
+            layers = 'string' === typeof layer ?
+                     layer.split(',') :
+                     ('[object Array]' === Object.prototype.toString.call(layer) ? layer : []);
+
+            for (i = 0; i < layers.length; i += 1) {
+                label = '_' + $.trim(layers[i].toString().toLowerCase()) + 's';
+                if (undefined !== self[label] && self[label].length) {
+                    for (j = 0; j < self[label].length; j += 1) {
+                        if (self.map === self[label][j].getMap()) {
+                            self[label][j].set('visible', false);
+                            self[label][j].set('directions', null);
+                            self[label][j].setMap(null);
+                        }
+                    }
+                    self[label].length = 0;
+                }
+            }
+        },
+        //#!#END
+        //#!#START MODIFY
+        /**
+         * Method:  Google Maps dynamic add layers
+         * @param {Object} options Refernce by tinyMap options
+         * @public
+         */
+        getSelfMap: function(){
+          //alert(this.map);
+          //alert('ggg');
+          //alert(print_r(this.map,true));
+          return this.map;
+        },
+        load: function(func){
+          //地圖載入後的事
+          google.maps.event.addListenerOnce(this.map, 'idle', function (func) {
+                    func();
+          });
+        },
+        modify: function (options) {
+            var self  = this,
+                func  = [],
+                label = [
+                    ['kml', 'kml'],
+                    ['marker', 'markers'],
+                    ['direction', 'direction'],
+                    ['polyline', 'drawPolyline'],
+                    ['polygon', 'drawPolygon'],
+                    ['circle', 'drawCircle'],
+                    ['zoom', 'setZoom'],
+                    ['showStreetView', 'streetView']
+                ],
+                i = 0,
+                m = self.map;
+
+            if (undefined !== options) {
+                for (i = 0; i < label.length; i += 1) {
+                    if (_hasOwnProperty(options, label[i][0])) {
+                        func.push(label[i][1]);
+                    }
+                }
+                if (null !== m) {
+                    if (func.length) {
+                        for (i = 0; i < func.length; i += 1) {
+                            if ('function' === typeof self[func[i]]) {
+                                self[func[i]](m, options, 'modify');
+                            }
+                        }
+                    } else {
+                        m.setOptions(options);
+                    }
+                }
+            }
+        },
+        //#!#END
+        /**
+         * Use HTML5 Geolocation API to detect the client's location.
+         * @param {Object} map Map intance
+         * @param {Object} opt Plugin options
+         */
+        geoLocation: function (map, opt) {
+            if (undefined !== opt.autoLocation && true === opt.autoLocation) {
+                console.dir('qwe');
+                if (navigator.geolocation) {
+                    try {
+                        navigator.geolocation.getCurrentPosition(function (loc) {
+                            if (loc) {
+                                map.panTo(
+                                    new google.maps.LatLng(
+                                        loc.coords.latitude,
+                                        loc.coords.longitude
+                                    )
+                                );
+                            }
+                        }, function (error) {
+                            console.dir(error);
+                        });
+                    } catch (ignore) {
+                    }
+                }
+            }
+        },
+
         /**
          * tinyMap Initialize
          * @this {tinyMap}
@@ -678,7 +1245,8 @@
                 geocoder = {};
 
             loop += 1;
-            if ('string' === typeof this.options.center) {
+
+            if ('string' === typeof self.options.center) {
                 window.setTimeout(function () {
                     var error = $(self.container),
                         msg = '';
@@ -696,14 +1264,14 @@
                                               results[0].geometry.location :
                                               '';
                                 self.map = new google.maps.Map(self.container, self.GoogleMapOptions);
+                                //alert(self.options.id);
                                 google.maps.event.addListenerOnce(self.map, 'idle', function () {
                                     self.overlay();
-                                    if (self.options.marker.length && true === self.options.markerFitBounds) {
-                                        setTimeout(function () {
-                                            self.map.fitBounds(self.bounds);
-                                        }, self.interval);
-                                    }
+                                    self.options.load();
                                 });
+                                // Events binding
+                                self.bindEvents(self.map, self.options.event);
+
                             } else {
                                 msg = self.options.notfound.text || status;
                                 error.html(msg.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
@@ -712,133 +1280,15 @@
                             error.html((undefined !== ignore.message ? ignore.message : ignore.description).toString());
                         }
                     });
-                }, (self.interval * loop));
+                }, self.interval);
             } else {
                 self.map = new google.maps.Map(self.container, self.GoogleMapOptions);
                 google.maps.event.addListenerOnce(self.map, 'idle', function () {
                     self.overlay();
-                    if (self.options.marker.length && true === self.options.markerFitBounds) {
-                        self.map.fitBounds(self.bounds);
-                    }
+                    self.options.load();
                 });
-            }
-            
-            
-          //初次載入
-            if(window['g']['gmap']=="")
-            {
-            	window['g']['gmap'] = self.map;
-            }
-            
-
-
-    
-            
-            
-        },
-        /**
-         * Method: Google Maps PanTo
-         * @param {string} addr Text address or "latitude, longitude" format
-         * @public
-         */
-        panto: function (addr) {
-            var self = this,
-                latlng = '',
-                geocoder = {};
-            if (_hasOwnProperty(self, 'map')) {
-                if (null !== self.map && undefined !== self.map) {
-                    if ('string' === typeof addr) {
-                        if (-1 !== addr.indexOf(',')) {
-                            latlng = 'loc: ' + addr;
-                        }
-                        geocoder = new google.maps.Geocoder();
-                        geocoder.geocode({'address': addr}, function (results, status) {
-                            if (status === google.maps.GeocoderStatus.OK) {
-                                if ($.isFunction(self.map.panTo) && undefined !== results[0]) {
-                                    self.map.panTo(results[0].geometry.location);
-                                }
-                            }
-                        });
-                        return;
-                    } else {
-                        if ('[object Array]' === Object.prototype.toString.call(addr)) {
-                            if (2 === addr.length) {
-                                latlng = new google.maps.LatLng(addr[0], addr[1]);
-                            }
-                        } else if (_hasOwnProperty(addr, 'lat') && _hasOwnProperty(addr, 'lng')) {
-                            latlng = new google.maps.LatLng(addr.lat, addr.lng);
-                        } else if (_hasOwnProperty(addr, 'x') && _hasOwnProperty(addr, 'y')) {
-                            latlng = new google.maps.LatLng(addr.x, addr.y);
-                        }
-                        if ($.isFunction(self.map.panTo) && undefined !== latlng) {
-                            self.map.panTo(latlng);
-                        }
-                    }
-                }
-            }
-        },
-        /**
-         * Method: Google Maps clear the specificed layer
-         * @param {string} type Layer type (markers, polylines, polygons, circles, kmls, directions)
-         * @public
-         */
-        clear: function (layer) {
-            var self = this,
-                layers = [],
-                label = '',
-                i = 0,
-                j = 0;
-            if ('string' === typeof layer) {
-                layers = layer.split(',');
-            }
-            //console.dir(layers);
-            for (i = 0; i < layers.length; i += 1) {
-                label = '_' + $.trim(layers[i].toString().toLowerCase()) + 's';
-                if (undefined !== self[label] && self[label].length) {
-                    for (j = 0; j < self[label].length; j += 1) {
-                        if (self.map === self[label][j].getMap()) {
-                            self[label][j].set('visible', false);
-                            self[label][j].setMap(self.map, null);
-                            self[label][j].set('directions', null);
-                        }
-                    }
-                    self[label] = [];
-                }
-            }
-            
-        },
-        /**
-         * Method:  Google Maps dynamic add layers
-         * @param {Object} options Refernce by tinyMap options
-         * @public
-         */
-        modify: function (options) {
-            var self = this,
-                func = [],
-                label = [
-                    ['kml', 'kml'],
-                    ['marker', 'markers'],
-                    ['direction', 'direction'],
-                    ['polyline', 'DrawPolyline'],
-                    ['polygon', 'DrawPolygon'],
-                    ['circle', 'DrawCircle'],
-                    ['zoom', 'setZoom']
-                ],
-                i = 0;
-            
-            if (undefined !== options) {
-                for (i = 0; i < label.length; i += 1) {
-                    if (_hasOwnProperty(options, label[i][0])) {
-                        func.push(label[i][1]);
-                    }
-                }
-                if (null !== self.map && undefined !== self.map && func) {
-                    for (i = 0; i < func.length; i += 1) {
-                        if ('function' === typeof self[func[i]]) {
-                            self[func[i]](self.map, options);
-                        }
-                    }
-                }
+                // Events binding
+                self.bindEvents(self.map, self.options.event);
             }
         }
     };
@@ -854,15 +1304,15 @@
         if ('string' === typeof options) {
             this.each(function () {
                 instance = $.data(this, pluginName);
-                if (instance instanceof tinyMap && 'function' === typeof instance[options]) {
+                if (instance instanceof TinyMap && 'function' === typeof instance[options]) {
                     result = instance[options].apply(instance, Array.prototype.slice.call(args, 1));
                 }
             });
-            return undefined !== result ? result : this;;
+            return undefined !== result ? result : this;
         } else {
             return this.each(function () {
                 if (!$.data(this, pluginName)) {
-                    $.data(this, pluginName, new tinyMap(this, options));
+                    $.data(this, pluginName, new TinyMap(this, options));
                 }
             });
         }

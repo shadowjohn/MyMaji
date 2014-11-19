@@ -37,11 +37,21 @@ function dialogOn(message,functionAction)
 }
 function dialogOff()
 {	
-	setTimeout(function(){
-		$.unmybox();
-	},500);
+	//setTimeout(function(){
+	$.unmybox();
+	//},500);
 }
 //我的ajax
+function myAjaxGETOnly(url)
+{
+  var tmp = $.ajax({
+      url: url,
+      type: "GET",      
+      crossDomain :true,
+      async: false
+   }).responseText;
+  return tmp;
+}
 function myAjax(url,postdata)
 {
   var tmp = $.ajax({
@@ -106,4 +116,52 @@ function ValidPhone(phonenum)
   {
     return true;
   }
+}
+function smallComment(message,is_need_motion)
+{
+	//畫面的1/15	
+	if($("#mysmallComment").size()==0)
+	{
+		$("body").append("<div id='mysmallComment'><div class='' id='mysmallCommentContent'></div></div>");
+		$("#mysmallComment").css({
+			'display':'none',
+			'position':'fixed',
+			'left':'0px',
+			'right':'0px',
+			'bottom':'4em',
+			'z-index':new Date().getTime(),
+			'text-align':'center',
+			'opacity':0.8,
+			'padding':'5px'
+		});
+		$("#mysmallCommentContent").css({			
+			'display': 'inline-block',	
+			'color':'#fff',
+			'background-color':'#000'			
+		});
+
+		/*
+		$("#mysmallComment").css({
+			'left': (wh['width']-$("#mysmallComment").width())/2+'px' 
+		});
+		*/
+
+		//$("#mysmallComment").corner();
+	}		
+	$("#mysmallCommentContent").html(message);
+	if(is_need_motion==true)
+	{
+		$("#mysmallComment").stop();
+		$("#mysmallComment").fadeIn("slow");
+		setTimeout(function(){
+			$("#mysmallComment").fadeOut('fast');
+		},5000);
+	}
+	else
+	{
+		$("#mysmallComment").show();
+		setTimeout(function(){
+			$("#mysmallComment").hide();
+		},5000);
+	}
 }

@@ -29,7 +29,7 @@
     <!-- <access origin="https://example.com" subdomains="true" /> such as above, but including subdomains, such as www -->
     <!-- <access origin=".*"/> Allow all domains, suggested development use only -->
 
-    <log level="ALL"/>
+    <preference name="loglevel" value="ALL"/>
     <preference name="useBrowserHistory" value="false" />
     <preference name="stay-in-webview" value="false" />
     
@@ -51,7 +51,8 @@
     <!-- plugin name="Capture" value="org.apache.cordova.Capture"/-->
     <!-- plugin name="Battery" value="org.apache.cordova.BatteryListener"/-->
     <!-- plugin name="SplashScreen" value="org.apache.cordova.SplashScreen"/-->
- 
+    <!-- 自定的plugin -->          
+     <plugin name="filePlugin" value="com.phonegap.plugins.filePlugin.filePlugin"/>      
 </plugins>
 </cordova>
 

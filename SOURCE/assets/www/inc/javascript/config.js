@@ -20,7 +20,7 @@ if(getMemory("me_data")==null)
 	window['me_data']['nickname']="";
 	window['me_data']['icon']="data:image/png;base64,R0lGODlhEwATAKIAAP//AMzMAGZmAP8zAAAAAP///wAAAAAAACH5BAEAAAUALAAAAAATABMAAANVWLrUTisyEoC1oUlFr8dQRHykFRad+Y0gdzlv86KVKdsskOUAjHu312rFK5GCRWDMJDACBKxGrTcFXTIo4CPY41QJgzAP69IWT14nWSL97DaiLVqRAAA7";
 	window['me_data']['lat']="";
-	window['me_data']['long']="";
+	window['me_data']['lon']="";
 	window['me_data']['allow_update_place']="YES";
 	window['me_data']['is_registered']="NO";
 	setMemory("me_data",json_encode(window['me_data']));
@@ -32,7 +32,7 @@ window['g']={};
 window['g']['token']='token';
 window['g']['online_status']=false;
 window['g']['me_lat']='';
-window['g']['me_lng']='';
+window['g']['me_lon']='';
 window['g']['road']='';
 window['g']['focus_me']=false;
 window['g']['direct']='';

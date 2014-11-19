@@ -143,10 +143,13 @@ function old_register_init(){
 			m['login_id']=phone;
 			m['pwd']=enPWD_string( password , window['PWD_CODE'] );
 			var URL = sprintf("%s?mode=login",window['webservice']);
+			//alert(URL);
+			//alert(print_r(m,true));
 			var info = myAjax(URL,m);
-			if(info['status']=="YES")
+			var jinfo = json_decode(info,true);
+			if(jinfo['status']=="YES")
 			{
-				init_login(info);
+				init_login(jinfo);
 				$(".show_div_class").hide();
 				//取得使用者列表
 			}
@@ -169,7 +172,7 @@ function init_login(info)
 	window['me_data']['nickname']="";
 	window['me_data']['icon']="data:image/png;base64,R0lGODlhEwATAKIAAP//AMzMAGZmAP8zAAAAAP///wAAAAAAACH5BAEAAAUALAAAAAATABMAAANVWLrUTisyEoC1oUlFr8dQRHykFRad+Y0gdzlv86KVKdsskOUAjHu312rFK5GCRWDMJDACBKxGrTcFXTIo4CPY41QJgzAP69IWT14nWSL97DaiLVqRAAA7";
 	window['me_data']['lat']="";
-	window['me_data']['long']="";
+	window['me_data']['lon']="";
 	window['me_data']['allow_update_place']=true;
 	window['me_data']['is_registered']="NO";
 	 */
@@ -184,6 +187,7 @@ function init_login(info)
 function getMeData(key)
 {
 	var jdata = json_decode(getMemory("me_data"));
+	//alert(print_r(jdata,true));
 	return jdata[key];
 }
 function setMeData(key,value)
