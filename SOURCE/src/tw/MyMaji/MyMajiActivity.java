@@ -12,6 +12,8 @@ import tw.MyMaji.R;
 //import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
@@ -52,6 +54,7 @@ final public class MyMajiActivity extends DroidGap {
 		super.appView.setLongClickable(true);
 		super.appView.setClipChildren(false);
 		super.appView.setKeepScreenOn(true);
+
 		//super.appView.setLayerType(View.LAYER_TYPE_NONE, null);
 		super.loadUrl("file:///android_asset/www/index.html");	
 	    super.appView.setWebViewClient(new CordovaWebViewClient(this, super.appView) {

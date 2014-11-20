@@ -667,7 +667,7 @@ function init(){
 		}, false);
 		document.addEventListener("backbutton", function(e) {
 			//e.preventDefault();
-			if ($("*[^='mybox_background']").size()!=0)
+			if ($("*[id^='mybox_background']").size()!=0)
 			{
 				dialogOff();
 			}

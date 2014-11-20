@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import android.net.Uri;
@@ -21,6 +23,8 @@ import android.webkit.CookieManager;
 
 import org.apache.cordova.api.Plugin;
 import org.apache.cordova.api.PluginResult;
+
+import tw.MyMaji.utils.utils;
 
 
 /**
@@ -113,6 +117,7 @@ public class FileUploader extends Plugin {
 			String boundary = "*****com.beetight.formBoundary";
 
 			URL url = new URL(server);
+			System.setProperty("http.keepAlive", "false");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
 			// Get cookies that have been set in our webview
@@ -127,11 +132,16 @@ public class FileUploader extends Plugin {
 			conn.setUseCaches(false);
 			// use a post method
 			conn.setRequestMethod("POST");
+			conn.setConnectTimeout(30000);
+			conn.setReadTimeout(30000);
+			conn.setFollowRedirects(true);
 			// set post headers
-			conn.setRequestProperty("Connection", "Keep-Alive");
-			conn.setRequestProperty("Content-Type",
-					"multipart/form-data;boundary=" + boundary);
+			conn.setRequestProperty("User-Agent","Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)");
+			//conn.setRequestProperty("Connection", "Keep-Alive");
+			conn.setRequestProperty("Content-Type","multipart/form-data;boundary=" + boundary);
 			conn.setRequestProperty("Cookie", cookie);
+			
+			//conn.setConnectTimeout(1000);
 			// open data output stream
 			DataOutputStream dos = new DataOutputStream(conn.getOutputStream());
 
@@ -197,8 +207,9 @@ public class FileUploader extends Plugin {
 						}
 					});
 					// Give a chance for the progress to be sent to javascript
-					Thread.sleep(100);
+					Thread.sleep(10);
 				}
+				Log.e("PhoneGapLog", "John Log upload bytesRead: " + bytesRead);
 			}
 			// send multipart form data necessary after file data...
 			dos.writeBytes(lineEnd);
@@ -207,13 +218,18 @@ public class FileUploader extends Plugin {
 			// close streams
 			fileInputStream.close();
 			dos.flush();
-			InputStream is = conn.getInputStream();
-			int ch;
-			StringBuffer b = new StringBuffer();
-			while ((ch = is.read()) != -1) {
-				b.append((char) ch);
+			
+			Reader r = new InputStreamReader(conn.getInputStream());		
+			StringBuilder sb = new StringBuilder();
+			char[] chars = new char[4*1024];
+			int len;
+			while((len = r.read(chars))>=0) {
+			    sb.append(chars, 0, len);
+			    Log.e("PhoneGapLog", "John Log upload getInputStream... "+sb.toString());
 			}
-			String s = b.toString();
+			r.close();
+			conn.disconnect();
+			String s = sb.toString();
 			dos.close();
 			JSONObject result = new JSONObject();
 			result.put("status", FileUploader.Status.COMPLETE);
