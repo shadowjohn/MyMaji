@@ -165,3 +165,16 @@ function smallComment(message,is_need_motion)
 		},5000);
 	}
 }
+function size_hum_read($size){
+    /* Returns a human readable size */
+	$size = parseInt($size);
+  var $i=0;
+  var $iec = new Array();
+  var $iec_kind="B,KB,MB,GB,TB,PB,EB,ZB,YB";
+  $iec=explode(',',$iec_kind);
+  while (($size/1024)>1) {
+    $size=$size/1024;
+    $i++;
+  }
+  return sprintf("%s%s",substr($size,0,strpos($size,'.')+4),$iec[$i]);
+}

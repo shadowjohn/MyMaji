@@ -86,6 +86,16 @@ public class filePlugin  extends CordovaPlugin {
 		        //return new PluginResult(PluginResult.Status.OK, utils.base64_encode(buffer));
 		        callbackContext.success( utils.base64_encode(buffer));
 			}
+			else if (action.equals("image2json2file"))
+			{
+				String img_filename=args.getString(0).trim();
+				String lat=args.getString(1).trim();
+				String lon=args.getString(2).trim();
+				String output_filename=args.getString(3).trim();
+				String jdata = "{ \"data\":\""+utils.base64_encode(utils.image2byte(img_filename))+"\", \"lat\":\""+lat+"\",\"lon\":\""+lon+"\"}  ";
+				utils.file_put_contents(output_filename, jdata);
+				callbackContext.success(output_filename);
+			}
 			else if (action.equals("get_sd_root_path"))
 			{
 				try{

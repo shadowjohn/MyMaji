@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1,minimum-scale=1, maximum-scale=1, user-scalable=0" />
 <script type="text/javascript" src="inc/javascript/cordova.js"></script>
 <script type="text/javascript" src="inc/javascript/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="inc/javascript/jquery-ui/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="inc/javascript/jquery-ui/jquery-ui.min.css" />
+<link rel="stylesheet" href="inc/javascript/jquery-ui/jquery.ui.progressbar.css" />
 <!-- jquery-Animate-Easing -->
 <script type="text/javascript" src="inc/javascript/jquery.easing.js"></script>
 <!--PHP函式庫-->
@@ -52,6 +55,7 @@
 
 <!--Native File-->
 <script type="text/javascript" src="inc/native_plugin_js/filePlugin.js"></script>
+<script type="text/javascript" src="inc/native_plugin_js/file-upload.js"></script>
 
 <script language="javascript">
 function cleanAll(){
@@ -311,6 +315,19 @@ function index_init(){
     FastClick.attach(document.body);
 	window['wh']=getWindowSize();				
 	
+	//初始SD目錄
+	filePlugin.get_sd_root_path().done(function(result){
+		window['sd_root']=result;
+		//alert(result);
+		window['basedir']=window['sd_root']+"/"+window['basedirName'];		
+		filePlugin.mkdir(window['basedir']).done(function(){
+			for(var i=0,max_i=count(window['dirs']);i<max_i;i++)
+			{
+				filePlugin.mkdir(window['basedir']+"/"+window['dirs'][i]).done(function(){});			
+			}
+		});
+	});
+	
 	geolocation_init();
 	window['g']['direct']=$("#direct");
 	window['g']['direct'].css({
@@ -399,8 +416,27 @@ function index_init(){
 					result=str_replace("file:///mnt","",result);
 					result=str_replace("content:/","",result);
 					result=str_replace("file:///storage","/storage",result);
+					var filename=time()+".json";
+					filePlugin.image2json2file(result,window['g']['me_lat'],window['g']['me_lon'],window['basedir']+"/upload/"+filename).done(function(outputfile){
+						//組合成功，接下來上傳...
+						var URL = sprintf("%s?mode=uploadPic",window['webservice']);
+						PARAMS = {
+											'my_id':enPWD_string( getMeData("id"), window['PWD_CODE'] )
+										 };
+						fileUploadUi(URL,PARAMS,outputfile,function(){
+							dialogOff();
+							//success
+							//成功後，應該刪除這個outputfile了 :D
+							filePlugin.unlink(outputfile);
+						},function(err){
+							//error
+							alert('Error...'+err);
+							dialogOff();
+						});						
+					});
+					
 					//alert(result);
-					filePlugin.file_to_base64(result).done(function(result){						
+					/*filePlugin.file_to_base64(result).done(function(result){						
 					     //onSuccess
 						dialogOn("資料上傳中...<span id='percent'>0.00%</span>",function(){
 							(function (data) {
@@ -464,11 +500,11 @@ function index_init(){
 											    	  //alert("上傳成功...");
 											    		dialogOff();
 											    		smallComment("上傳成功...",true);
-											    		/*dialogOn("上傳成功...",function(){
-											    			setTimeout(function(){
-											    				dialogOff();
-											    			},3000);
-											    		});*/
+											    		//dialogOn("上傳成功...",function(){
+											    		//	setTimeout(function(){
+											    		//		dialogOff();
+											    		//	},3000);
+											    		//});
 										    		}											    	
 												}
 											});
@@ -476,6 +512,7 @@ function index_init(){
 							})(result);
 						 });
 					}); //file to base64 done
+					*/
 				   }, function(){
 				     //onError
 					   dialogOff();
@@ -630,11 +667,18 @@ function init(){
 		}, false);
 		document.addEventListener("backbutton", function(e) {
 			//e.preventDefault();
-			if (confirm("你確定要離開我的麻吉系統嗎??") == true) {
-				navigator.app.exitApp();
-				return true;
-			} else {
-				return false;
+			if ($("*[^='mybox_background']").size()!=0)
+			{
+				dialogOff();
+			}
+			else
+			{
+				if (confirm("你確定要離開我的麻吉系統嗎??") == true) {
+					navigator.app.exitApp();
+					return true;
+				} else {
+					return false;
+				}
 			}
 		}, true);						
 	    var script = document.createElement('script');

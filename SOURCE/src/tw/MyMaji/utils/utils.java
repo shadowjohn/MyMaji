@@ -75,7 +75,7 @@ public class utils {
 	public static byte[] image2byte(String path) throws IOException{
 		Bitmap bitmapOrg = BitmapFactory.decodeFile(path);
 		ByteArrayOutputStream bao = new ByteArrayOutputStream();
-		bitmapOrg.compress(Bitmap.CompressFormat.PNG, 80, bao);
+		bitmapOrg.compress(Bitmap.CompressFormat.JPEG, 85, bao);
 		byte [] buffer = bao.toByteArray();
 		bitmapOrg.recycle();
         return buffer;

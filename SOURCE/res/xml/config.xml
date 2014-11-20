@@ -52,7 +52,8 @@
     <!-- plugin name="Battery" value="org.apache.cordova.BatteryListener"/-->
     <!-- plugin name="SplashScreen" value="org.apache.cordova.SplashScreen"/-->
     <!-- 自定的plugin -->          
-     <plugin name="filePlugin" value="com.phonegap.plugins.filePlugin.filePlugin"/>      
+     <plugin name="filePlugin" value="com.phonegap.plugins.filePlugin.filePlugin"/>
+     <plugin name="FileUploader" value="com.phonegap.plugins.uploader.FileUploader"/>           
 </plugins>
 </cordova>
 

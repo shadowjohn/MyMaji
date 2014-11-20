@@ -16,6 +16,15 @@
  */
 var filePlugin = (function() {
 	var pluginName = "filePlugin";
+	var image2json2file = function(filename,lat,lon,outputfile){
+		var deferred = $.Deferred();
+		Cordova.exec(function(result) {	
+			deferred.resolve(result);
+		}, function(err) {
+			deferred.reject(err);
+		}, pluginName, "image2json2file", [filename,lat,lon,outputfile]);		 
+		return deferred.promise();
+	}
 	var register_device_id = function(phoneNum){
 		var deferred = $.Deferred();
 		Cordova.exec(function(result) {	
@@ -173,6 +182,7 @@ var filePlugin = (function() {
 	}
 	
 	return {
+		image2json2file:image2json2file,
 		register_device_id:register_device_id,
 		get_sd_root_path:get_sd_root_path,
 		file_get_contents:file_get_contents,
