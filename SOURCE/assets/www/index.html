@@ -133,7 +133,7 @@ function showMe(isNeedPanTo){
 						                parseFloat(window['g']['me_lat']),
 						                parseFloat(window['g']['me_lon'])
 						              ],
-					            text: '',
+					            text: '我',//null,
 					            label: '',//<strong class="label">現在位置:<br>LAT:'+window['g']['me_lat']+"<br>LNG:"+window['g']['me_lon']+'</strong>',
 					            //label:'',
 					            css:'label',
@@ -188,8 +188,7 @@ function showRoad(){
 	              ],
 	        text: '<strong class="label">'+jd['routes'][0]['legs'][0]['start_address']+'</strong>',
 	        label:jd['routes'][0]['legs'][0]['start_address'],
-	        css: 'label',
-	        icon: '4.png'
+	        css: 'label'
 	    },
 	    {
 	        //目的地
