@@ -28,6 +28,9 @@
  * 路徑規劃新增 direction.autoViewport (bool 預設 true) 參數可設置是否要自動縮放該路線資訊。
  *
  * Release 2014.08.06.184249
+ * 可以利用:
+ * var map = $("#map").tinyMap('getSelfMap');
+ * 取得 google 元件本身呦!    
  */
 ;(function ($, window, document, undefined) {
 
@@ -40,6 +43,7 @@
         defaults = {
             'id':{},
             'load':function(){},
+            'me':function(){},
             'center': {x: '', y: ''},
             'control': true,
             'disableDoubleClickZoom': false, //2.6.4
@@ -85,7 +89,7 @@
                 'position': 'LEFT_TOP'
             },
             'notfound': '找不到查詢的地點',
-            'loading': '讀取中&hellip;',
+            'loading': 'Loading...',
             'kml': {
                 'url': '',
                 'viewport': true,
@@ -1171,6 +1175,9 @@
           google.maps.event.addListenerOnce(this.map, 'idle', function (func) {
                     func();
           });
+        },
+        me:function(){
+        	return this;
         },
         modify: function (options) {
             var self  = this,

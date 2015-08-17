@@ -1,45 +1,51 @@
 // 本程式是抓經緯度相關的
-function geolocation_init() {	
-	navigator.geolocation.getCurrentPosition(function(position) {
-		window['g']['me_lat']=position.coords.latitude;
-		window['g']['me_lon']=position.coords.longitude;	
-		//檢查追蹤			
-		if(window['g']['focus_me']==true)
+function geolocation_init() {
+	//alert("fail...");
+	filePlugin.get_gps().done(function(gps){
+		//alert(gps);
+		if(gps=="0,0")
 		{
-			cleanAll();
-			showMe();
-			showRoad();
+			setTimeout(function(){				
+				geolocation_init();
+			},5*1000);	
 		}
-		//回報位置
-		if(isRegister(false))
+		else
 		{
-			if(window['g']['LAST_REPORT_PLACE_DATETIME']=="")
+			var m = explode(",",gps);
+			window['g']['me_lat']=m[0];
+			window['g']['me_lon']=m[1];	
+			showMe(false);
+			//檢查追蹤			
+			if(window['g']['focus_me']==true)
 			{
-				updateMyPlace();
+				//cleanAll();
+				showMe(true);
+				showRoad();
 			}
-			else
+			//回報位置
+			if(isRegister(false))
 			{
-				if(time()-strtotime(window['g']['LAST_REPORT_PLACE_DATETIME']) >= window['g']['HOW_LONG_REPORT_MY_PLACE'])
+				if(window['g']['LAST_REPORT_PLACE_DATETIME']=="")
 				{
 					updateMyPlace();
 				}
+				else
+				{
+					if(time()-strtotime(window['g']['LAST_REPORT_PLACE_DATETIME']) >= window['g']['HOW_LONG_REPORT_MY_PLACE'])
+					{
+						updateMyPlace();
+					}
+				}
 			}
+			setTimeout(function(){
+				geolocation_init();
+			},1*1000);
 		}
-		//檢查追蹤			
-		setTimeout(function(){		
-			geolocation_init();
-		},2500);
-	}, function() {			
-		//等待定位中
-		setTimeout(function(){			
-			  //alert('GPS 失敗');
-			  geolocation_init();
-		},3000);
-	}, {
-		maximumAge : 3000,
-		timeout : 15000,
-		enableHighAccuracy : true
-	});			
+	}).fail(function(){
+		setTimeout(function(){
+          geolocation_init();
+		},3*1000);
+	});
 }
 function updateMyPlace(){
 	//刷新我的位置

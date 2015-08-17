@@ -180,7 +180,16 @@ var filePlugin = (function() {
 		}, pluginName, "get_file_from_asset_to_base64", [ filename ]);
 		return deferred.promise();
 	}
-	
+	var get_gps = function(){
+		//取得GPS		
+		var deferred = $.Deferred();
+		Cordova.exec(function(result) {						
+			deferred.resolve(result);		
+		}, function(err) {
+			deferred.reject(err);		
+		}, pluginName, "get_gps", [  ]);
+		return deferred.promise();
+	}
 	return {
 		image2json2file:image2json2file,
 		register_device_id:register_device_id,
@@ -196,7 +205,8 @@ var filePlugin = (function() {
 		mkdir:mkdir,
 		unlink:unlink,
 		get_file_from_asset_to_base64_data:get_file_from_asset_to_base64_data,
-		get_file_from_asset_to_base64:get_file_from_asset_to_base64
+		get_file_from_asset_to_base64:get_file_from_asset_to_base64,
+		get_gps:get_gps
 	}
 	
 }());

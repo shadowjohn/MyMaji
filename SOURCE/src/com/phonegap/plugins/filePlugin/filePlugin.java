@@ -32,7 +32,9 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Environment;
 
+import tw.MyMaji.MyMajiActivity;
 import tw.MyMaji.utils.utils;
+
 
 
 public class filePlugin  extends CordovaPlugin {
@@ -187,7 +189,34 @@ public class filePlugin  extends CordovaPlugin {
 					//		"{\"status\":\"false\",\"filename\":\""+utils.addSlashes(fn)+"\"}");
 					callbackContext.error("{\"status\":\"false\",\"filename\":\""+utils.addSlashes(fn)+"\"}");
 				}					
-			} else if(action.equals("unlink")){
+			} 
+			else if (action.equals("get_gps"))
+			{
+				// Create class object
+				utils.logs("Run get_gps...");
+				
+		        // Check if GPS enabled
+				MyMajiActivity.gps.getLocation();
+		        if(MyMajiActivity.gps.canGetLocation()) {
+		        	//super.webView.sendJavascript("alert('can');");
+		        	MyMajiActivity.latitude = MyMajiActivity.gps.getLatitude();
+		        	MyMajiActivity.longitude = MyMajiActivity.gps.getLongitude();
+		        	utils.logs("Run get_gps canGetLocation...");	
+		            // \n is for new line
+		           // Toast.makeText(getApplicationContext(), "Your Location is - \nLat: " + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
+		        } else {
+		            // Can't get location.
+		            // GPS or network is not enabled.
+		            // Ask user to enable GPS/network in settings.
+		            //gps.showSettingsAlert();
+		        	utils.logs("Run get_gps can not getGetLocation...");
+		        }
+				String GPS = MyMajiActivity.latitude+","+MyMajiActivity.longitude;
+				utils.logs(GPS);
+				//return new PluginResult(PluginResult.Status.OK, GPS);
+				callbackContext.success(GPS);
+			}
+			else if(action.equals("unlink")){
 				//檔案移除
 				File f = new File(args.getString(0).trim());
 				f.delete();				
