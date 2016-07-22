@@ -67,17 +67,6 @@ canvas{
   	bottom:12px;
   	z-index:2;
   }
-  #friends{
-    position:fixed;
-  	/*background-image:url('images/friends.png');*/
-  	background-repeat:no-repeat;
-  	background-size:100% 100%;
-  	width:42px;
-  	height:39px;
-  	left:97px;
-  	bottom:12px;
-  	z-index:2;
-  }  
   #camera{
     position:fixed;
   	/*background-image:url('images/camera.png');*/
@@ -85,10 +74,21 @@ canvas{
   	background-size:100% 100%;
   	width:42px;
   	height:39px;
-  	left:144px;
+  	left:97px;
   	bottom:12px;
   	z-index:2;
-  }    
+  }      
+  #friends{
+    position:fixed;
+  	/*background-image:url('images/friends.png');*/
+  	background-repeat:no-repeat;
+  	background-size:100% 100%;
+  	width:42px;
+  	height:39px;
+  	left:142px;
+  	bottom:12px;
+  	z-index:2;
+  }  
  #gps_focus_on_off_btn{
     position:fixed;
   	/*background-image:url('images/focus_off.png');*/

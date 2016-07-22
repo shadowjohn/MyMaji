@@ -23,20 +23,20 @@ function geolocation_init() {
 				showRoad();
 			}
 			//回報位置
-			if(isRegister(false))
+			/*if(isRegister(false))
 			{
 				if(window['g']['LAST_REPORT_PLACE_DATETIME']=="")
 				{
-					updateMyPlace();
+					//updateMyPlace();
 				}
 				else
 				{
 					if(time()-strtotime(window['g']['LAST_REPORT_PLACE_DATETIME']) >= window['g']['HOW_LONG_REPORT_MY_PLACE'])
 					{
-						updateMyPlace();
+						//updateMyPlace();
 					}
 				}
-			}
+			}*/
 			setTimeout(function(){
 				geolocation_init();
 			},1*1000);
@@ -48,13 +48,13 @@ function geolocation_init() {
 	});
 }
 function updateMyPlace(){
-	//刷新我的位置
+	//刷新我的位置1
 	var URL=sprintf("%s?mode=updateMyPlace",window['webservice']);
 	var m = new Object();
 	m['lat']=enPWD_string(window['g']['me_lat'],window['PWD_CODE']);
 	m['long']=enPWD_string(window['g']['me_lon'],window['PWD_CODE']);
 	m['id'] = enPWD_string(getMeData('id'),window['PWD_CODE']);
-	myAjax_async(URL,m,function(result){
-		window['g']['LAST_REPORT_PLACE_DATETIME']=date('Y-m-d H:i:s');
-	});
+	//myAjax_async(URL,m,function(result){
+	//	window['g']['LAST_REPORT_PLACE_DATETIME']=date('Y-m-d H:i:s');
+	//});
 }

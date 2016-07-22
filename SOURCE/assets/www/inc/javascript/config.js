@@ -2,7 +2,7 @@
 setMemory("debug_mode", "0");
 window['version']=1.0;
 window['PWD_CODE'] = "3WA_IS_GOOD";
-window['webservice']="http://123.241.3.31/MyMaji/MyMaji_api.php";
+window['webservice']="http://3wa.tw/MyMaji/MyMaji_api.php";
 window['sd_root']="";
 window['basedirName']="MyMaji";
 window['dirs']=["upload"]; //window['basedir']+"/upload"

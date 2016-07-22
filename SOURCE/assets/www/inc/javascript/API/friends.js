@@ -6,6 +6,7 @@ function isRegister(isNeedGUI)
 		if(isNeedGUI)
 		{
 			$("#t_register").show();
+			$("#theform").hide();
 			$("#btn_new_login").unbind("click");
 			$("#btn_new_login").click(function(){
 				$(".show_div_class").hide();

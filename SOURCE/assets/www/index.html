@@ -474,6 +474,10 @@ function index_init(){
 	//相機
 	$("#camera").unbind("click");
 	$("#camera").click(function(){
+		if(!isRegister(true))
+		{
+			return;
+		}
 		dialogOn("相機啟動中...",function(){
 			setTimeout(function(){
 				navigator.camera.getPicture(function(result){
@@ -488,6 +492,7 @@ function index_init(){
 						PARAMS = {
 											'my_id':enPWD_string( getMeData("id"), window['PWD_CODE'] )
 										 };
+						//alert(print_r(PARAMS,true));
 						fileUploadUi(URL,PARAMS,outputfile,function(){
 							dialogOff();
 							//success
@@ -498,86 +503,7 @@ function index_init(){
 							alert('Error...'+err);
 							dialogOff();
 						});						
-					});
-					
-					//alert(result);
-					/*filePlugin.file_to_base64(result).done(function(result){						
-					     //onSuccess
-						dialogOn("資料上傳中...<span id='percent'>0.00%</span>",function(){
-							(function (data) {
-								setTimeout(function(){
-									 setTimeout(function(){
-										dialogOff();
-									 },1000);
-									 var o =new Object();
-									 o["PIC"]=data;
-									 o['my_id']=enPWD_string( getMeData("id"), window['PWD_CODE'] );
-									 o['lat'] = window['g']['me_lat'];
-									 o['lon'] = window['g']['me_lon'];								 
-									 var totals=0;
-									 totals+=strlen(o['PIC']);
-									 totals+=strlen(o['my_id']);
-									 totals+=strlen(o['lat'].toString());
-									 totals+=strlen(o['lon'].toString());
-									 //alert(totals);
-									 var URL = sprintf("%s?mode=uploadPic",window['webservice']);
-									 //alert(URL);
-									 //alert(print_r(o,true));
-									 //console.log(totals);		
-									 $.ajax({		
-										 xhr: function () {
-										        var xhr = $.ajaxSettings.xhr();
-										        xhr.upload.addEventListener("progress", function (evt) {									        	
-										            if (evt.lengthComputable) {
-										                var percentComplete = evt.loaded / evt.total;
-										                //console.log(percentComplete);
-										                $("#percent").html(Math.round(percentComplete * 100,2) + "%");
-										            }
-										        }, false);
-										        xhr.addEventListener("progress", function (evt) {
-										            if (evt.lengthComputable) {
-										                var percentComplete = evt.loaded / evt.total;
-										                //console.log(percentComplete);
-										                //alert(percentComplete);
-										                $("#percent").html(Math.round(percentComplete * 100,2) + "%");
-										            }
-										        }, false);
-										        return xhr;
-										    },									    
-										    xhrFields: {
-										    	withCredentials: true
-										    },
-										    type: "POST",
-											url:URL,
-											data:o,
-											async:true,											
-											dataType:"text",										
-											crossDomain:true,
-											success:function(result){				
-													if(result=="")
-													{
-														alert("Error...");
-														dialogOff();
-													}
-											    	var jdata = json_decode(result,true);
-											    	if(jdata['STATUS']=='OK')
-										    		{
-											    	  //alert("上傳成功...");
-											    		dialogOff();
-											    		smallComment("上傳成功...",true);
-											    		//dialogOn("上傳成功...",function(){
-											    		//	setTimeout(function(){
-											    		//		dialogOff();
-											    		//	},3000);
-											    		//});
-										    		}											    	
-												}
-											});
-								},500);
-							})(result);
-						 });
-					}); //file to base64 done
-					*/
+					});				
 				   }, function(){
 				     //onError
 					   dialogOff();
@@ -763,7 +689,7 @@ function onDeviceReady() {
 	$(document).ready(function(){
 		setTimeout(function(){
 			init();
-		},1500);
+		},500);
 	});	
 }
 </script>
@@ -774,7 +700,7 @@ function onDeviceReady() {
   <div id="theblock" name="theblock"></div>
   <div id="gps" name="gps"></div>
   <div id="car" name="car"></div>
-  <div id="friends" name="friends"></div>
+  <!-- div id="friends" name="friends"></div-->
   <div id="camera" name="camera"></div>
   <div id="direct" name="direct"></div>
   <div id="direct_text" name="direct_text"><!-- 前進方向--></div>
@@ -871,14 +797,15 @@ function onDeviceReady() {
  </form>
 </center>
 <!-- TEMPLATES -->
-<div id="t_FriendsLists" class="show_div_class" style="display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
-	<!--好友名單-->
+<!--好友名單-->
+<!-- div id="t_FriendsLists" class="show_div_class" style="display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
+	
 	<div id="FriendsLists_div" style="width:{width}px;height:{height}px;">
 	<center>
 		<h2>好友名單</h2>
 	</center>
 	</div>
-</div>
+</div-->
 <div id="t_register" class="show_div_class" style="background-color:#227433;display:none;position:absolute;left:0px;top:0px;border:2px dashed #fff;width:99%;text-align:left;margin-left:auto;margin-right:auto;">
 	<!--登入視窗-->	
 	<center>
@@ -1034,7 +961,7 @@ function onDeviceReady() {
 	</div>	
 </div>
 <!-- 聊天室 -->
-<div id="chat_room_div">
-</div>
+<!--div id="chat_room_div">
+</div-->
 </body>
 </html>		
